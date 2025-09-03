@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ruleta Quiz - Host</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
+    header { padding: 16px 20px; background: #111827; border-bottom: 1px solid #334155; display:flex; align-items:center; gap:16px; }
+    h1 { font-size: 20px; margin: 0; }
+    main { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .card { background: #111827; border:1px solid #334155; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    label { display:block; margin-bottom: 6px; color: #94a3b8; }
+    input, textarea, select, button { width: 100%; padding: 10px 12px; border-radius: 10px; border:1px solid #334155; background:#0b1220; color:#e2e8f0; }
+    input::placeholder, textarea::placeholder { color:#64748b; }
+    button { background: #2563eb; border: none; cursor: pointer; font-weight: 600; }
+    button:hover { background: #1d4ed8; }
+    .muted { color:#94a3b8; font-size: 14px; }
+    .players { display:flex; flex-wrap: wrap; gap: 8px; }
+    .pill { background:#0b1220; border:1px solid #334155; padding:8px 12px; border-radius: 999px; }
+    .status { display:flex; gap: 12px; align-items:center; }
+    .green { color:#22c55e; }
+    .red { color:#ef4444; }
+    .yellow { color:#eab308; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .qbox { padding:12px; border-radius:12px; background:#0b1220; border:1px solid #334155; }
+    .answers button { width:auto; margin-right:8px; margin-top:8px; }
+    .leaderboard table { width:100%; border-collapse: collapse; }
+    .leaderboard th, .leaderboard td { text-align:left; padding:8px; border-bottom:1px solid #334155; }
+    .badge { padding:4px 8px; border-radius:8px; background:#1f2937; font-size:12px; }
+    .inline { display:inline-flex; gap:8px; align-items:center; }
+    .small { font-size:12px; }
+    .center { text-align:center; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎡 Ruleta Quiz — Host</h1>
+    <div class="muted">Crea una sala, comparte el PIN y dirige el juego en vivo.</div>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Nombre de la sala</label>
+          <input id="roomName" placeholder="Ej. Tercero A - Sociales" />
+        </div>
+        <div>
+          <label>Duración por pregunta (segundos)</label>
+          <input id="questionTime" type="number" value="25" min="5" max="120" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Banco de preguntas (JSON)</label>
+          <textarea id="questionsJson" rows="8" placeholder='[{"texto":"¿Capital de Ecuador?","opciones":["Guayaquil","Quito","Cuenca"],"correcta":1}]'></textarea>
+          <div class="inline small muted" style="margin-top:8px;">
+            <span class="badge">TIP</span>
+            Puedes pegar aquí tu banco (formato JSON). O sube el archivo <code>questions.json</code> más abajo.
+          </div>
+        </div>
+        <div>
+          <label>Cargar archivo questions.json</label>
+          <input id="questionsFile" type="file" accept=".json" />
+          <div class="inline small muted" style="margin-top:8px;">
+            <span class="badge">Formato</span> 
+            <code>[{"texto":"...","opciones":["A","B","C","D"],"correcta":2}]</code>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <button id="createRoomBtn">Crear sala</button>
+        </div>
+        <div class="status">
+          <div>PIN: <strong id="pin">—</strong></div>
+          <div>Estado: <span id="state" class="yellow">sin iniciar</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Jugadores conectados</h3>
+      <div class="players" id="players"></div>
+    </div>
+
+    <div class="card">
+      <h3>Control de preguntas</h3>
+      <div class="grid2">
+        <div class="qbox">
+          <div class="inline" style="justify-content: space-between;">
+            <div><span class="badge">Actual</span> <span id="qIndex">—</span> / <span id="qTotal">—</span></div>
+            <div class="inline">
+              <button id="prevBtn">⟵ Anterior</button>
+              <button id="nextBtn">Siguiente ⟶</button>
+            </div>
+          </div>
+          <div id="qText" style="margin-top:10px; font-size:18px;"></div>
+          <div class="answers" id="qOptions"></div>
+          <div class="inline small muted" style="margin-top:8px;">
+            <span class="badge">Correcta</span> <span id="qCorrect">—</span>
+          </div>
+        </div>
+        <div class="qbox">
+          <div class="inline" style="justify-content: space-between;">
+            <div><span class="badge">Tiempo</span> <span id="timer">—</span>s</div>
+            <div class="inline">
+              <button id="startQBtn">▶︎ Iniciar pregunta</button>
+              <button id="revealBtn">👁 Mostrar correcta</button>
+              <button id="endBtn">🏁 Finalizar juego</button>
+            </div>
+          </div>
+          <div id="answersStats" class="small muted" style="margin-top:10px;">Aún sin respuestas…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card leaderboard">
+      <h3>🏆 Ranking (Top 5)</h3>
+      <table>
+        <thead><tr><th>#</th><th>Jugador</th><th>Puntos</th></tr></thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card center small muted">
+      Comparte este enlace con los estudiantes para unirse: <code><span id="joinUrl">—</span></code>
+    </div>
+  </main>
+
+  <!-- TODO: Replace with your Firebase config from Console -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getDatabase, ref, set, get, onValue, update, push, child, remove } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+  // 1) PASTE YOUR CONFIG HERE
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Expose for other inline scripts
+  window._firebase = { db, ref, set, get, onValue, update, push, child, remove };
+</script>
+
+
+  <script type="module">
+    const { db, ref, set, get, onValue, update, push, child, remove } = window._firebase;
+
+    const roomName = document.getElementById('roomName');
+    const questionTime = document.getElementById('questionTime');
+    const questionsJson = document.getElementById('questionsJson');
+    const questionsFile = document.getElementById('questionsFile');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const playersDiv = document.getElementById('players');
+    const pinEl = document.getElementById('pin');
+    const stateEl = document.getElementById('state');
+    const qIndexEl = document.getElementById('qIndex');
+    const qTotalEl = document.getElementById('qTotal');
+    const qTextEl = document.getElementById('qText');
+    const qOptionsEl = document.getElementById('qOptions');
+    const qCorrectEl = document.getElementById('qCorrect');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const startQBtn = document.getElementById('startQBtn');
+    const revealBtn = document.getElementById('revealBtn');
+    const endBtn = document.getElementById('endBtn');
+    const timerEl = document.getElementById('timer');
+    const answersStatsEl = document.getElementById('answersStats');
+    const joinUrlEl = document.getElementById('joinUrl');
+
+    let roomId = null;
+    let questions = [];
+    let timerInterval = null;
+
+    // Load JSON file if provided
+    questionsFile.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      try {
+        const data = JSON.parse(text);
+        if (Array.isArray(data)) {
+          questions = data;
+          questionsJson.value = JSON.stringify(data, null, 2);
+          qTotalEl.textContent = data.length;
+        } else alert('El JSON debe ser un arreglo de preguntas');
+      } catch (err) {
+        alert('JSON inválido: ' + err.message);
+      }
+    });
+
+    function loadQuestionsFromTextarea() {
+      if (!questionsJson.value.trim()) return [];
+      try {
+        const data = JSON.parse(questionsJson.value);
+        if (Array.isArray(data)) return data;
+      } catch (e) {
+        alert('JSON de preguntas inválido');
+      }
+      return [];
+    }
+
+    function generatePin() {
+      return Math.floor(100000 + Math.random()*900000).toString();
+    }
+
+    async function createRoom() {
+      questions = loadQuestionsFromTextarea();
+      if (questions.length === 0) {
+        alert('Carga preguntas en JSON antes de crear la sala.');
+        return;
+      }
+      const pin = generatePin();
+      const r = ref(db, 'rooms/' + pin);
+      const payload = {
+        name: roomName.value || 'Sala sin nombre',
+        createdAt: Date.now(),
+        state: 'lobby', // lobby | asking | reveal | ended
+        questionIndex: 0,
+        questionTime: Number(questionTime.value) || 25,
+        questions: questions,
+        players: {}, // uid: {name, score}
+        answers: {}, // qIndex: {uid: answerIndex}
+      };
+      await set(r, payload);
+      roomId = pin;
+      pinEl.textContent = pin;
+      stateEl.textContent = 'lobby';
+      qTotalEl.textContent = questions.length;
+      updateJoinUrl();
+      subscribeRoom();
+    }
+
+    function updateJoinUrl() {
+      const u = new URL(window.location.href);
+      const base = u.origin + u.pathname.replace('host.html','') + 'join.html';
+      joinUrlEl.textContent = base + '?pin=' + roomId;
+    }
+
+    function subscribeRoom() {
+      const r = ref(db, 'rooms/' + roomId);
+      onValue(r, (snap) => {
+        const data = snap.val();
+        if (!data) return;
+        // State
+        stateEl.textContent = data.state;
+        // Players
+        playersDiv.innerHTML = '';
+        const players = data.players || {};
+        const arr = Object.entries(players).map(([uid,p]) => ({uid, ...p}));
+        arr.sort((a,b)=> b.score - a.score);
+        arr.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'pill';
+          div.textContent = p.name + ' • ' + (p.score||0) + ' pts';
+          playersDiv.appendChild(div);
+        });
+        // Question
+        const qi = data.questionIndex || 0;
+        qIndexEl.textContent = qi + 1;
+        const q = (data.questions||[])[qi];
+        if (q) {
+          qTextEl.textContent = q.texto;
+          qOptionsEl.innerHTML = '';
+          q.opciones.forEach((op, idx) => {
+            const b = document.createElement('button');
+            b.textContent = String.fromCharCode(65+idx) + ') ' + op;
+            b.disabled = true;
+            qOptionsEl.appendChild(b);
+          });
+          qCorrectEl.textContent = q.correcta != null ? String.fromCharCode(65 + q.correcta) : '—';
+          // Answer stats
+          const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
+          const counts = new Array(q.opciones.length).fill(0);
+          Object.values(answers).forEach(a => { if (typeof a === 'number') counts[a]++; });
+          answersStatsEl.textContent = 'Respuestas recibidas: ' + Object.keys(answers).length + ' — ' + counts.map((c,i)=> String.fromCharCode(65+i)+': '+c).join('  |  ');
+        }
+        // Leaderboard
+        renderLeaderboard(arr);
+      });
+    }
+
+    function renderLeaderboard(arr) {
+      const lbBody = document.getElementById('lbBody');
+      lbBody.innerHTML = '';
+      arr.slice(0,5).forEach((p,i)=> {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>{i+1}</td><td>{p.name}</td><td>{p.score||0}</td>`;
+        lbBody.appendChild(tr);
+      });
+    }
+
+    async function setState(state) {
+      await update(ref(db, 'rooms/' + roomId), { state });
+    }
+
+    async function setQuestionIndex(qi) {
+      await update(ref(db, 'rooms/' + roomId), { questionIndex: qi });
+    }
+
+    function startTimer(seconds) {
+      clearInterval(timerInterval);
+      let t = seconds;
+      timerEl.textContent = t;
+      timerInterval = setInterval(()=>{
+        t--;
+        timerEl.textContent = t;
+        if (t <= 0) {
+          clearInterval(timerInterval);
+          // auto move to reveal
+          revealCorrect();
+        }
+      }, 1000);
+    }
+
+    async function startQuestion() {
+      const snap = await get(ref(db, 'rooms/' + roomId));
+      const data = snap.val();
+      if (!data) return;
+      await update(ref(db, 'rooms/' + roomId), { state: 'asking' });
+      // Clear existing answers for this question
+      const qi = data.questionIndex || 0;
+      await remove(child(ref(db, 'rooms/' + roomId + '/answers'), String(qi)));
+      startTimer(data.questionTime || 25);
+    }
+
+    async function revealCorrect() {
+      // Move to reveal, calculate scores
+      const snap = await get(ref(db, 'rooms/' + roomId));
+      const data = snap.val();
+      const qi = data.questionIndex || 0;
+      const q = data.questions[qi];
+      const correct = q.correcta;
+      const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
+      const updates = {};
+      Object.entries(data.players || {}).forEach(([uid, p]) => {
+        const ans = answers[uid];
+        if (typeof ans === 'number' && ans === correct) {
+          const add = 100; // base points
+          updates['rooms/' + roomId + '/players/' + uid + '/score'] = (p.score || 0) + add;
+        }
+      });
+      if (Object.keys(updates).length) await update(ref(db), updates);
+      await setState('reveal');
+    }
+
+    async function nextQuestion() {
+      const snap = await get(ref(db, 'rooms/' + roomId));
+      const data = snap.val();
+      let qi = (data.questionIndex || 0) + 1;
+      if (qi >= data.questions.length) {
+        await setState('ended');
+        clearInterval(timerInterval);
+        return;
+      }
+      await setQuestionIndex(qi);
+      answersStatsEl.textContent = 'Aún sin respuestas…';
+      timerEl.textContent = '—';
+      await setState('lobby');
+    }
+
+    function prevQuestion() {
+      get(ref(db, 'rooms/' + roomId)).then(snap=> {
+        const data = snap.val();
+        let qi = Math.max(0, (data.questionIndex || 0) - 1);
+        setQuestionIndex(qi);
+      });
+    }
+
+    async function endGame() {
+      await setState('ended');
+      clearInterval(timerInterval);
+    }
+
+    createRoomBtn.addEventListener('click', createRoom);
+    prevBtn.addEventListener('click', prevQuestion);
+    nextBtn.addEventListener('click', nextQuestion);
+    startQBtn.addEventListener('click', startQuestion);
+    revealBtn.addEventListener('click', revealCorrect);
+    endBtn.addEventListener('click', endGame);
+
+    // Update total when textarea changes
+    questionsJson.addEventListener('input', () => {
+      const qs = loadQuestionsFromTextarea();
+      qTotalEl.textContent = qs.length || '—';
+    });
+  </script>
+</body>
+</html>

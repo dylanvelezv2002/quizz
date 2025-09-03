@@ -1,0 +1,29 @@
+[
+  {
+    "texto": "¿Capital de Ecuador?",
+    "opciones": [
+      "Guayaquil",
+      "Quito",
+      "Cuenca"
+    ],
+    "correcta": 1
+  },
+  {
+    "texto": "7 × 8 = ?",
+    "opciones": [
+      "54",
+      "56",
+      "64"
+    ],
+    "correcta": 1
+  },
+  {
+    "texto": "Autor de Don Quijote",
+    "opciones": [
+      "G.G. Márquez",
+      "M. de Cervantes",
+      "L. de Vega"
+    ],
+    "correcta": 1
+  }
+]

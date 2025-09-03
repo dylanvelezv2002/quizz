@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ruleta Quiz - Unirse</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
+    main { max-width: 600px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 22px; }
+    .card { background: #111827; border:1px solid #334155; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    label { display:block; margin-bottom: 6px; color: #94a3b8; }
+    input, button { width: 100%; padding: 12px; border-radius: 10px; border:1px solid #334155; background:#0b1220; color:#e2e8f0; }
+    button { background: #2563eb; border:none; cursor:pointer; font-weight:600; }
+    button:hover { background:#1d4ed8; }
+    .muted { color:#94a3b8; font-size: 14px; }
+    .pill { display:inline-block; padding: 6px 10px; border-radius:999px; background:#0b1220; border:1px solid #334155; }
+    .grid { display:grid; gap:12px; }
+    .options button { width: 100%; text-align:left; }
+    .correct { border-color:#22c55e; }
+    .wrong { border-color:#ef4444; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>🎡 Ruleta Quiz — Unirse</h1>
+    <div class="card" id="joinCard">
+      <div class="grid">
+        <div>
+          <label>PIN de la sala</label>
+          <input id="pin" placeholder="Ej. 123456" inputmode="numeric" />
+        </div>
+        <div>
+          <label>Tu nombre</label>
+          <input id="name" placeholder="Ej. Ana" />
+        </div>
+        <button id="joinBtn">Unirme</button>
+        <div class="muted">Ingresa el PIN que te da el docente en pantalla.</div>
+      </div>
+    </div>
+
+    <div class="card" id="lobbyCard" style="display:none;">
+      <div>Estás en la sala <span class="pill" id="roomName">—</span></div>
+      <div class="muted">Espera a que el docente inicie la pregunta…</div>
+    </div>
+
+    <div class="card" id="questionCard" style="display:none;">
+      <div class="muted">Tiempo restante: <strong id="timer">—</strong>s</div>
+      <h3 id="qText">—</h3>
+      <div class="grid options" id="qOptions"></div>
+      <div class="muted" id="answerMsg" style="margin-top:8px;">—</div>
+    </div>
+
+    <div class="card" id="revealCard" style="display:none;">
+      <div id="revealMsg">Revisando la respuesta correcta…</div>
+    </div>
+
+    <div class="card" id="endCard" style="display:none;">
+      <h3>🏁 ¡Juego finalizado!</h3>
+      <div class="muted">Gracias por participar.</div>
+    </div>
+  </main>
+
+  <!-- TODO: Replace with your Firebase config from Console -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getDatabase, ref, set, get, onValue, update, push, child, remove } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+  // 1) PASTE YOUR CONFIG HERE
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Expose for other inline scripts
+  window._firebase = { db, ref, set, get, onValue, update, push, child, remove };
+</script>
+
+
+  <script type="module">
+    const { db, ref, set, get, onValue, update, push, child, remove } = window._firebase;
+
+    const pinInput = document.getElementById('pin');
+    const nameInput = document.getElementById('name');
+    const joinBtn = document.getElementById('joinBtn');
+    const joinCard = document.getElementById('joinCard');
+    const lobbyCard = document.getElementById('lobbyCard');
+    const questionCard = document.getElementById('questionCard');
+    const revealCard = document.getElementById('revealCard');
+    const endCard = document.getElementById('endCard');
+    const roomNameEl = document.getElementById('roomName');
+    const qTextEl = document.getElementById('qText');
+    const qOptionsEl = document.getElementById('qOptions');
+    const timerEl = document.getElementById('timer');
+    const answerMsg = document.getElementById('answerMsg');
+    const revealMsg = document.getElementById('revealMsg');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('pin')) pinInput.value = urlParams.get('pin');
+
+    let roomId = null;
+    let uid = null;
+    let lastState = 'lobby';
+    let lastQIndex = 0;
+    let lastAnswer = null;
+
+    function show(card) {
+      [joinCard, lobbyCard, questionCard, revealCard, endCard].forEach(c => c.style.display = 'none');
+      card.style.display = 'block';
+    }
+
+    async function join() {
+      roomId = pinInput.value.trim();
+      const name = nameInput.value.trim() || 'Anónimo';
+      if (!roomId || roomId.length < 6) return alert('PIN inválido');
+      // Create player
+      uid = 'u_' + Math.random().toString(36).slice(2,10);
+      const r = ref(db, 'rooms/' + roomId);
+      const snap = await get(r);
+      if (!snap.exists()) return alert('Sala no encontrada');
+      const data = snap.val();
+      await update(ref(db, 'rooms/' + roomId + '/players'), { [uid]: { name, score: 0 } });
+      roomNameEl.textContent = data.name;
+      subscribe();
+      show(lobbyCard);
+    }
+
+    function subscribe() {
+      onValue(ref(db, 'rooms/' + roomId), (snap) => {
+        const data = snap.val();
+        if (!data) return;
+        const state = data.state;
+        const qi = data.questionIndex || 0;
+        const q = (data.questions||[])[qi];
+        const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
+        const myAnswer = answers[uid];
+
+        // UI by state
+        if (state === 'lobby') {
+          show(lobbyCard);
+          timerEl.textContent = '—';
+          answerMsg.textContent = '—';
+          qOptionsEl.innerHTML = '';
+          lastAnswer = null;
+        } else if (state === 'asking' && q) {
+          show(questionCard);
+          qTextEl.textContent = q.texto;
+          const opts = q.opciones || [];
+          qOptionsEl.innerHTML = '';
+          opts.forEach((op, idx)=> {
+            const b = document.createElement('button');
+            b.textContent = String.fromCharCode(65+idx) + ') ' + op;
+            b.disabled = typeof myAnswer === 'number';
+            b.onclick = () => submitAnswer(idx);
+            if (typeof myAnswer === 'number' && myAnswer === idx) b.classList.add('pill');
+            qOptionsEl.appendChild(b);
+          });
+          // Timer countdown approximation (client-side)
+          // We do not sync exact remaining seconds; teacher announces duration.
+          timerEl.textContent = data.questionTime || 25;
+        } else if (state === 'reveal' && q) {
+          show(revealCard);
+          const correct = q.correcta;
+          if (typeof myAnswer === 'number') {
+            revealMsg.textContent = (myAnswer === correct) ? '✅ ¡Correcto!' : '❌ Incorrecto.';
+          } else {
+            revealMsg.textContent = '⏳ No respondiste a tiempo.';
+          }
+        } else if (state === 'ended') {
+          show(endCard);
+        }
+      });
+    }
+
+    async function submitAnswer(idx) {
+      // Write under answers/qIndex/uid = idx
+      const snap = await get(ref(db, 'rooms/' + roomId));
+      const data = snap.val();
+      if (!data || data.state !== 'asking') return;
+      const qi = data.questionIndex || 0;
+      await update(ref(db, 'rooms/' + roomId + '/answers/' + qi), { [uid]: idx });
+      answerMsg.textContent = 'Respuesta enviada.';
+      // Disable buttons
+      Array.from(qOptionsEl.querySelectorAll('button')).forEach(b=> b.disabled = true);
+    }
+
+    joinBtn.addEventListener('click', join);
+  </script>
+</body>
+</html>

@@ -2,198 +2,336 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ruleta Quiz - Unirse</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ruleta Quiz — Unirse</title>
+  <meta name="theme-color" content="#0ea5e9" />
   <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
-    main { max-width: 600px; margin: 0 auto; padding: 24px; }
-    h1 { font-size: 22px; }
-    .card { background: #111827; border:1px solid #334155; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
-    label { display:block; margin-bottom: 6px; color: #94a3b8; }
-    input, button { width: 100%; padding: 12px; border-radius: 10px; border:1px solid #334155; background:#0b1220; color:#e2e8f0; }
-    button { background: #2563eb; border:none; cursor:pointer; font-weight:600; }
-    button:hover { background:#1d4ed8; }
-    .muted { color:#94a3b8; font-size: 14px; }
-    .pill { display:inline-block; padding: 6px 10px; border-radius:999px; background:#0b1220; border:1px solid #334155; }
-    .grid { display:grid; gap:12px; }
-    .options button { width: 100%; text-align:left; }
-    .correct { border-color:#22c55e; }
-    .wrong { border-color:#ef4444; }
+    :root{
+      --bg1:#0f172a; --bg2:#020617;
+      --card:#0b1220; --border:#334155;
+      --text:#e2e8f0; --muted:#94a3b8;
+      --brand:#0ea5e9; --brand-2:#22d3ee;
+      --ok:#22c55e; --bad:#ef4444; --pill:#111827;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(1200px 600px at 80% -10%,rgba(14,165,233,.25),transparent),
+                  radial-gradient(800px 400px at -10% 110%,rgba(34,211,238,.2),transparent),
+                  linear-gradient(160deg,var(--bg1),var(--bg2));
+    }
+    header{
+      padding:14px 18px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border);
+      backdrop-filter: saturate(120%) blur(6px); background:rgba(2,6,23,.35); position:sticky; top:0; z-index:10;
+    }
+    .badge{background:#1f2937;border:1px solid var(--border);padding:4px 8px;border-radius:999px;font-size:12px}
+    .title{font-weight:800; letter-spacing:.3px}
+    .subtitle{color:var(--muted); font-size:13px}
+    main{max-width:720px; margin:24px auto; padding:0 16px}
+    .card{
+      background:rgba(2,6,23,.6); border:1px solid var(--border); border-radius:16px;
+      padding:18px; margin-bottom:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    .card h1,.card h2,.card h3{margin:0 0 10px 0}
+    label{display:block; margin:8px 0 6px; color:var(--muted); font-size:14px}
+    input,button{
+      width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--border);
+      background:var(--card); color:var(--text); font-size:16px;
+    }
+    input::placeholder{color:#64748b}
+    button{
+      cursor:pointer; border:none; background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      font-weight:700; letter-spacing:.2px; transition:transform .06s ease, filter .2s ease;
+    }
+    button:active{transform:scale(.98)}
+    button[disabled]{opacity:.6; cursor:not-allowed; filter:grayscale(.25)}
+    .muted{color:var(--muted); font-size:13px}
+    .grid{display:grid; gap:12px}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    @media (max-width:640px){ .row{grid-template-columns:1fr} }
+    .pill{display:inline-flex;gap:8px;align-items:center;background:var(--pill);border:1px solid var(--border);padding:6px 10px;border-radius:999px}
+    .opt{width:100%; text-align:left; border:1px solid var(--border); background:var(--card);}
+    .opt.chosen{outline:2px solid var(--brand)}
+    .opt.correct{border-color:var(--ok)}
+    .opt.wrong{border-color:var(--bad)}
+    .timer{
+      font-variant-numeric: tabular-nums; font-weight:800; letter-spacing:.5px;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2)); -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .center{text-align:center}
+    .footer-note{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
+  <header>
+    <span class="badge">Materia</span>
+    <div>
+      <div class="title">Evaluación de Vulnerabilidades — Participante</div>
+      <div class="subtitle">Únete con el PIN y responde desde tu dispositivo</div>
+    </div>
+  </header>
+
   <main>
-    <h1>🎡 Ruleta Quiz — Unirse</h1>
-    <div class="card" id="joinCard">
-      <div class="grid">
+    <!-- JOIN -->
+    <section class="card" id="joinCard">
+      <h2>🎡 Ruleta Quiz — Unirse</h2>
+      <div class="row">
         <div>
           <label>PIN de la sala</label>
-          <input id="pin" placeholder="Ej. 123456" inputmode="numeric" />
+          <input id="pin" placeholder="Ej. 123456" inputmode="numeric" maxlength="6" />
         </div>
         <div>
           <label>Tu nombre</label>
-          <input id="name" placeholder="Ej. Ana" />
+          <input id="name" placeholder="Ej. Ana" maxlength="24" />
         </div>
-        <button id="joinBtn">Unirme</button>
-        <div class="muted">Ingresa el PIN que te da el docente en pantalla.</div>
       </div>
-    </div>
+      <div class="grid" style="margin-top:10px">
+        <button id="joinBtn">Unirme</button>
+        <div class="muted">Tip: si entras desde enlace <code>?pin=XXXXXX</code> se rellena solo.</div>
+      </div>
+    </section>
 
-    <div class="card" id="lobbyCard" style="display:none;">
-      <div>Estás en la sala <span class="pill" id="roomName">—</span></div>
-      <div class="muted">Espera a que el docente inicie la pregunta…</div>
-    </div>
+    <!-- LOBBY -->
+    <section class="card" id="lobbyCard" style="display:none">
+      <h3>👋 ¡Bienvenido/a!</h3>
+      <p>Estás en la sala <span class="pill"><strong id="roomName">—</strong></span></p>
+      <p class="muted">Espera a que el docente inicie la siguiente pregunta…</p>
+    </section>
 
-    <div class="card" id="questionCard" style="display:none;">
-      <div class="muted">Tiempo restante: <strong id="timer">—</strong>s</div>
-      <h3 id="qText">—</h3>
-      <div class="grid options" id="qOptions"></div>
-      <div class="muted" id="answerMsg" style="margin-top:8px;">—</div>
-    </div>
+    <!-- QUESTION -->
+    <section class="card" id="questionCard" style="display:none">
+      <div class="row" style="align-items:center">
+        <div class="pill">Tiempo: <span class="timer" id="timer">—</span>s</div>
+        <div class="pill">Pregunta <span id="qIndex">—</span></div>
+      </div>
+      <h3 id="qText" style="margin-top:10px">—</h3>
+      <div class="grid" id="qOptions" style="margin-top:12px"></div>
+      <div class="muted" id="answerMsg" style="margin-top:10px">—</div>
+    </section>
 
-    <div class="card" id="revealCard" style="display:none;">
-      <div id="revealMsg">Revisando la respuesta correcta…</div>
-    </div>
+    <!-- REVEAL -->
+    <section class="card" id="revealCard" style="display:none">
+      <h3 id="revealMsg">Revisando la respuesta correcta…</h3>
+      <p class="muted">Espera indicaciones del docente.</p>
+    </section>
 
-    <div class="card" id="endCard" style="display:none;">
-      <h3>🏁 ¡Juego finalizado!</h3>
-      <div class="muted">Gracias por participar.</div>
-    </div>
+    <!-- END -->
+    <section class="card center" id="endCard" style="display:none">
+      <h2>🏁 ¡Juego finalizado!</h2>
+      <p class="muted">Gracias por participar.</p>
+    </section>
+
+    <p class="footer-note center">Si recargas la página, tu nombre se recuerda para este PIN.</p>
   </main>
 
-  <!-- TODO: Replace with your Firebase config from Console -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-  import { getDatabase, ref, set, get, onValue, update, push, child, remove } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
-
-  // 1) PASTE YOUR CONFIG HERE
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
-  // Expose for other inline scripts
-  window._firebase = { db, ref, set, get, onValue, update, push, child, remove };
-</script>
-
-
+  <!-- Firebase + lógica del jugador -->
   <script type="module">
-    const { db, ref, set, get, onValue, update, push, child, remove } = window._firebase;
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getDatabase, ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-    const pinInput = document.getElementById('pin');
-    const nameInput = document.getElementById('name');
-    const joinBtn = document.getElementById('joinBtn');
+    // ====== TU CONFIGURACIÓN (con databaseURL de tu proyecto) ======
+    const firebaseConfig = {
+      apiKey: "AIzaSyDDWj49V7myELlBoHQ9dgVKxz163FJyjEc",
+      authDomain: "ruleta-quiz.firebaseapp.com",
+      projectId: "ruleta-quiz",
+      storageBucket: "ruleta-quiz.firebasestorage.app",
+      messagingSenderId: "384827905965",
+      appId: "1:384827905965:web:897a8b455f1e0a2c54f324",
+      databaseURL: "https://ruleta-quiz-default-rtdb.firebaseio.com"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // ====== ELEMENTOS ======
     const joinCard = document.getElementById('joinCard');
     const lobbyCard = document.getElementById('lobbyCard');
     const questionCard = document.getElementById('questionCard');
     const revealCard = document.getElementById('revealCard');
     const endCard = document.getElementById('endCard');
+
+    const pinInput = document.getElementById('pin');
+    const nameInput = document.getElementById('name');
+    const joinBtn = document.getElementById('joinBtn');
+
     const roomNameEl = document.getElementById('roomName');
     const qTextEl = document.getElementById('qText');
     const qOptionsEl = document.getElementById('qOptions');
+    const qIndexEl = document.getElementById('qIndex');
     const timerEl = document.getElementById('timer');
     const answerMsg = document.getElementById('answerMsg');
     const revealMsg = document.getElementById('revealMsg');
 
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('pin')) pinInput.value = urlParams.get('pin');
-
+    // ====== ESTADO LOCAL ======
     let roomId = null;
     let uid = null;
-    let lastState = 'lobby';
-    let lastQIndex = 0;
-    let lastAnswer = null;
+    let lastState = '';
+    let lastQIndex = -1;
+    let localTimer = null;
+    let myAnswer = null;
 
-    function show(card) {
-      [joinCard, lobbyCard, questionCard, revealCard, endCard].forEach(c => c.style.display = 'none');
+    const params = new URLSearchParams(location.search);
+    if (params.get('pin')) pinInput.value = params.get('pin');
+
+    // Restituye nombre/uid si ya te uniste antes a este PIN
+    function restoreIdentity(pin){
+      const store = JSON.parse(localStorage.getItem('rq_identity') || '{}');
+      if (store[pin]) {
+        uid = store[pin].uid;
+        if (!nameInput.value) nameInput.value = store[pin].name || '';
+      }
+    }
+    function persistIdentity(pin, name, myUid){
+      const store = JSON.parse(localStorage.getItem('rq_identity') || '{}');
+      store[pin] = { name, uid: myUid };
+      localStorage.setItem('rq_identity', JSON.stringify(store));
+    }
+
+    function show(card){
+      [joinCard,lobbyCard,questionCard,revealCard,endCard].forEach(c => c.style.display='none');
       card.style.display = 'block';
     }
 
-    async function join() {
-      roomId = pinInput.value.trim();
-      const name = nameInput.value.trim() || 'Anónimo';
-      if (!roomId || roomId.length < 6) return alert('PIN inválido');
-      // Create player
-      uid = 'u_' + Math.random().toString(36).slice(2,10);
-      const r = ref(db, 'rooms/' + roomId);
-      const snap = await get(r);
-      if (!snap.exists()) return alert('Sala no encontrada');
+    // ====== UNIRSE ======
+    async function joinRoom(){
+      roomId = (pinInput.value||'').trim();
+      const name = (nameInput.value||'Anónimo').trim().slice(0,24);
+      if (!/^[0-9]{6}$/.test(roomId)) return alert('PIN inválido (6 dígitos).');
+
+      restoreIdentity(roomId);
+      if (!uid) uid = 'u_' + Math.random().toString(36).slice(2,10);
+
+      // Verificar sala
+      const snap = await get(ref(db, 'rooms/' + roomId));
+      if (!snap.exists()) return alert('Sala no encontrada.');
       const data = snap.val();
-      await update(ref(db, 'rooms/' + roomId + '/players'), { [uid]: { name, score: 0 } });
-      roomNameEl.textContent = data.name;
-      subscribe();
+
+      // Registrar/actualizar jugador
+      await update(ref(db, 'rooms/' + roomId + '/players'), { [uid]: { name, score: data.players?.[uid]?.score || 0 } });
+
+      persistIdentity(roomId, name, uid);
+      roomNameEl.textContent = data.name || ('PIN ' + roomId);
+
+      subscribeRoom();
       show(lobbyCard);
     }
 
-    function subscribe() {
+    // ====== SUSCRIPCIÓN A ESTADO ======
+    function subscribeRoom(){
       onValue(ref(db, 'rooms/' + roomId), (snap) => {
+        if (!snap.exists()) return;
         const data = snap.val();
-        if (!data) return;
         const state = data.state;
         const qi = data.questionIndex || 0;
         const q = (data.questions||[])[qi];
         const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
-        const myAnswer = answers[uid];
+        myAnswer = answers[uid];
 
-        // UI by state
-        if (state === 'lobby') {
-          show(lobbyCard);
-          timerEl.textContent = '—';
-          answerMsg.textContent = '—';
-          qOptionsEl.innerHTML = '';
-          lastAnswer = null;
-        } else if (state === 'asking' && q) {
-          show(questionCard);
-          qTextEl.textContent = q.texto;
-          const opts = q.opciones || [];
-          qOptionsEl.innerHTML = '';
-          opts.forEach((op, idx)=> {
-            const b = document.createElement('button');
-            b.textContent = String.fromCharCode(65+idx) + ') ' + op;
-            b.disabled = typeof myAnswer === 'number';
-            b.onclick = () => submitAnswer(idx);
-            if (typeof myAnswer === 'number' && myAnswer === idx) b.classList.add('pill');
-            qOptionsEl.appendChild(b);
-          });
-          // Timer countdown approximation (client-side)
-          // We do not sync exact remaining seconds; teacher announces duration.
-          timerEl.textContent = data.questionTime || 25;
-        } else if (state === 'reveal' && q) {
-          show(revealCard);
-          const correct = q.correcta;
-          if (typeof myAnswer === 'number') {
-            revealMsg.textContent = (myAnswer === correct) ? '✅ ¡Correcto!' : '❌ Incorrecto.';
-          } else {
-            revealMsg.textContent = '⏳ No respondiste a tiempo.';
+        // Nuevo estado -> render
+        if (state === 'lobby'){
+          stopLocalTimer();
+          renderLobby();
+        } else if (state === 'asking' && q){
+          renderQuestion(q, qi, data.questionTime || 25);
+          if (lastState !== 'asking' || lastQIndex !== qi){
+            startLocalTimer(data.questionTime || 25);
           }
-        } else if (state === 'ended') {
-          show(endCard);
+        } else if (state === 'reveal' && q){
+          stopLocalTimer();
+          renderReveal(q);
+        } else if (state === 'ended'){
+          stopLocalTimer();
+          renderEnded();
         }
+
+        lastState = state;
+        lastQIndex = qi;
       });
     }
 
-    async function submitAnswer(idx) {
-      // Write under answers/qIndex/uid = idx
-      const snap = await get(ref(db, 'rooms/' + roomId));
-      const data = snap.val();
-      if (!data || data.state !== 'asking') return;
-      const qi = data.questionIndex || 0;
-      await update(ref(db, 'rooms/' + roomId + '/answers/' + qi), { [uid]: idx });
-      answerMsg.textContent = 'Respuesta enviada.';
-      // Disable buttons
-      Array.from(qOptionsEl.querySelectorAll('button')).forEach(b=> b.disabled = true);
+    // ====== RENDERS ======
+    function renderLobby(){
+      show(lobbyCard);
+      qOptionsEl.innerHTML = '';
+      timerEl.textContent = '—';
+      answerMsg.textContent = '—';
     }
 
-    joinBtn.addEventListener('click', join);
+    function renderQuestion(q, qi, seconds){
+      show(questionCard);
+      qIndexEl.textContent = (qi+1);
+      qTextEl.textContent = q.texto || '—';
+      timerEl.textContent = seconds;
+
+      qOptionsEl.innerHTML = '';
+      (q.opciones || []).forEach((op, idx) => {
+        const b = document.createElement('button');
+        b.className = 'opt';
+        b.textContent = String.fromCharCode(65+idx) + ') ' + op;
+        b.disabled = typeof myAnswer === 'number';
+        if (typeof myAnswer === 'number' && myAnswer === idx) b.classList.add('chosen');
+        b.onclick = () => submitAnswer(idx);
+        qOptionsEl.appendChild(b);
+      });
+
+      answerMsg.textContent = (typeof myAnswer === 'number') ? 'Respuesta enviada.' : 'Elige una opción.';
+    }
+
+    function renderReveal(q){
+      show(revealCard);
+      const correct = q.correcta;
+      if (typeof myAnswer === 'number'){
+        revealMsg.textContent = (myAnswer === correct) ? '✅ ¡Correcto!' : '❌ Incorrecto.';
+      } else {
+        revealMsg.textContent = '⏳ No alcanzaste a responder.';
+      }
+    }
+
+    function renderEnded(){
+      show(endCard);
+    }
+
+    // ====== TIMER LOCAL (visual, no bloqueante) ======
+    function startLocalTimer(t){
+      stopLocalTimer();
+      timerEl.textContent = t;
+      localTimer = setInterval(() => {
+        t--; timerEl.textContent = Math.max(0, t);
+        if (t <= 0) stopLocalTimer();
+      }, 1000);
+    }
+    function stopLocalTimer(){
+      if (localTimer){ clearInterval(localTimer); localTimer = null; }
+    }
+
+    // ====== ENVIAR RESPUESTA ======
+    async function submitAnswer(idx){
+      // Lee estado actual
+      const snap = await get(ref(db, 'rooms/' + roomId));
+      if (!snap.exists()) return;
+      const data = snap.val();
+      if (data.state !== 'asking') return;
+
+      const qi = data.questionIndex || 0;
+      await update(ref(db, 'rooms/' + roomId + '/answers/' + qi), { [uid]: idx });
+
+      // Deshabilitar botones y marcar selección
+      Array.from(qOptionsEl.querySelectorAll('button')).forEach((b,i)=>{
+        b.disabled = true;
+        if (i === idx) b.classList.add('chosen');
+      });
+      answerMsg.textContent = 'Respuesta enviada.';
+    }
+
+    // ====== EVENTOS ======
+    joinBtn.addEventListener('click', joinRoom);
+    // Enter para comodidad
+    [pinInput, nameInput].forEach(inp => inp.addEventListener('keydown', e=>{
+      if (e.key === 'Enter') joinRoom();
+    }));
+
+    // Pre-cargar nombre si existe para este PIN
+    if (pinInput.value) restoreIdentity(pinInput.value);
   </script>
 </body>
 </html>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Ruleta Quiz — Resultados en Vivo</title>
+  <meta name="theme-color" content="#0ea5e9"/>
+  <style>
+    :root{
+      --bg1:#0f172a; --bg2:#020617; --card:#0b1220; --border:#334155;
+      --text:#e2e8f0; --muted:#94a3b8; --brand:#0ea5e9; --brand2:#22d3ee;
+      --ok:#22c55e; --warn:#eab308; --bad:#ef4444; --pill:#111827;
+      --gold:#facc15; --silver:#c0c7d1; --bronze:#b45309;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(1200px 600px at 80% -10%,rgba(14,165,233,.25),transparent),
+                  radial-gradient(800px 400px at -10% 110%,rgba(34,211,238,.2),transparent),
+                  linear-gradient(160deg,var(--bg1),var(--bg2));
+    }
+    header{
+      position:sticky; top:0; z-index:10; display:flex; gap:12px; align-items:center; justify-content:space-between;
+      padding:14px 18px; border-bottom:1px solid var(--border);
+      background:rgba(2,6,23,.45); backdrop-filter:blur(6px) saturate(120%);
+    }
+    .title{font-weight:900; letter-spacing:.3px}
+    .subtitle{color:var(--muted); font-size:13px}
+    .badge{background:#1f2937;border:1px solid var(--border);padding:4px 8px;border-radius:999px;font-size:12px}
+    .pill{display:inline-flex;gap:8px;align-items:center;background:var(--pill);border:1px solid var(--border);padding:6px 10px;border-radius:999px}
+    main{max-width:1100px; margin:22px auto; padding:0 16px}
+    .grid{display:grid; gap:16px}
+    .layout{display:grid; grid-template-columns: 1.2fr .8fr; gap:16px}
+    @media (max-width:960px){ .layout{grid-template-columns:1fr} }
+
+    .card{
+      background:rgba(2,6,23,.6); border:1px solid var(--border); border-radius:16px;
+      padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+
+    /* Podio */
+    .podium{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:end; height:320px; padding:8px}
+    .stage{
+      position:relative; display:flex; flex-direction:column; justify-content:flex-end; align-items:center;
+      height:100%; border:1px solid var(--border); border-radius:18px; background:#0b1220; overflow:hidden;
+    }
+    .bar{
+      width:100%; border-top-left-radius:18px; border-top-right-radius:18px;
+      background:linear-gradient(135deg,var(--brand),var(--brand2)); height:0%;
+      transition:height .8s cubic-bezier(.2,.8,.2,1);
+    }
+    .crown{
+      position:absolute; top:8px; font-size:22px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6));
+    }
+    .medal{position:absolute; top:10px; right:10px; font-size:18px}
+    .m1{color:var(--gold)} .m2{color:var(--silver)} .m3{color:var(--bronze)}
+    .avatar{
+      position:absolute; bottom:calc( var(--h) + 12px ); transform:translateY(50%);
+      display:flex; align-items:center; justify-content:center;
+      width:58px; height:58px; border-radius:50%; border:2px solid var(--border); background:#0a1220;
+      font-weight:900; letter-spacing:.3px;
+      transition:bottom .8s cubic-bezier(.2,.8,.2,1);
+    }
+    .label{
+      position:absolute; bottom:8px; width:100%; text-align:center; font-size:14px; color:var(--muted);
+    }
+    .scoreTag{
+      position:absolute; bottom:calc(var(--h) + 66px); transform:translateY(50%);
+      font-weight:800; font-size:14px; background:#0b1220; border:1px solid var(--border); padding:4px 8px; border-radius:12px;
+      transition:bottom .8s cubic-bezier(.2,.8,.2,1);
+    }
+
+    /* Top5 Lista */
+    .list{display:grid; gap:8px}
+    .row{
+      display:grid; grid-template-columns: 32px 1fr 120px; gap:10px; align-items:center;
+      border:1px solid var(--border); border-radius:12px; padding:8px 10px; background:#0b1220;
+    }
+    .rank{
+      width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+      font-weight:900; font-size:14px; background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#081019;
+    }
+    .name{font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+    .progressWrap{width:100%; height:10px; background:#0a1220; border:1px solid var(--border); border-radius:999px; overflow:hidden}
+    .progress{height:100%; width:0%; background:linear-gradient(90deg,var(--brand),var(--brand2)); transition:width .8s ease}
+    .score{font-variant-numeric: tabular-nums; font-weight:900; text-align:right}
+
+    .status{
+      display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted)
+    }
+    .stateDot{width:8px; height:8px; border-radius:50%}
+    .state-lobby{background:var(--brand)}
+    .state-asking{background:var(--warn)}
+    .state-reveal{background:var(--ok)}
+    .state-ended{background:var(--bad)}
+
+    .controls{display:flex; gap:10px; align-items:center}
+    input,button{
+      padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:#0b1220; color:var(--text);
+    }
+    button{cursor:pointer; border:none; background:linear-gradient(135deg,var(--brand),var(--brand2)); font-weight:800}
+    button:active{transform:scale(.98)}
+
+    /* Animaciones sutiles */
+    .bump{animation: bump .4s ease}
+    @keyframes bump{0%{transform:scale(1)}50%{transform:scale(1.04)}100%{transform:scale(1)}}
+    .rise{animation: rise .8s ease}
+    @keyframes rise{from{transform:translateY(8px); opacity:.6}to{transform:translateY(0);opacity:1}}
+
+    /* Canvas confeti al fondo */
+    #confetti{position:fixed; inset:0; pointer-events:none; z-index:0}
+  </style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+
+  <header>
+    <div>
+      <div class="title">🎉 Resultados en Vivo — Ruleta Quiz</div>
+      <div class="subtitle">Podio dinámico + Top 5. Se actualiza en tiempo real.</div>
+    </div>
+    <div class="controls">
+      <input id="pin" placeholder="PIN (6 dígitos)" inputmode="numeric" maxlength="6"/>
+      <button id="watchBtn">Ver sala</button>
+      <span class="pill status">
+        <span id="stateDot" class="stateDot"></span>
+        <span id="stateText">—</span>
+      </span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card">
+      <div class="status" style="justify-content:space-between">
+        <div>📌 Sala: <strong id="roomName">—</strong> • <span class="badge">PIN</span> <strong id="pinShow">—</strong></div>
+        <div>Pregunta <strong id="qIndex">—</strong> / <span id="qTotal">—</span></div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <!-- Podio -->
+      <section class="card">
+        <h3 style="margin:0 0 10px 0">🥇 Podio</h3>
+        <div class="podium">
+          <!-- 2do -->
+          <div class="stage" id="stage2" style="--h: 0px">
+            <div class="bar" id="bar2"></div>
+            <div class="avatar" id="av2">—</div>
+            <div class="scoreTag" id="tag2">0</div>
+            <div class="medal m2">🥈</div>
+            <div class="label" id="lb2">—</div>
+          </div>
+          <!-- 1ro -->
+          <div class="stage" id="stage1" style="--h: 0px">
+            <div class="bar" id="bar1"></div>
+            <div class="crown">👑</div>
+            <div class="avatar" id="av1">—</div>
+            <div class="scoreTag" id="tag1">0</div>
+            <div class="medal m1">🥇</div>
+            <div class="label" id="lb1">—</div>
+          </div>
+          <!-- 3ro -->
+          <div class="stage" id="stage3" style="--h: 0px">
+            <div class="bar" id="bar3"></div>
+            <div class="avatar" id="av3">—</div>
+            <div class="scoreTag" id="tag3">0</div>
+            <div class="medal m3">🥉</div>
+            <div class="label" id="lb3">—</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Top 5 lista con barras -->
+      <section class="card">
+        <h3 style="margin:0 0 10px 0">🏆 Top 5</h3>
+        <div class="list" id="list"></div>
+      </section>
+    </section>
+  </main>
+
+  <!-- Firebase + lógica -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+    // === CONFIG FIREBASE ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyDDWj49V7myELlBoHQ9dgVKxz163FJyjEc",
+      authDomain: "ruleta-quiz.firebaseapp.com",
+      projectId: "ruleta-quiz",
+      storageBucket: "ruleta-quiz.firebasestorage.app",
+      messagingSenderId: "384827905965",
+      appId: "1:384827905965:web:897a8b455f1e0a2c54f324",
+      databaseURL: "https://ruleta-quiz-default-rtdb.firebaseio.com"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // === DOM ===
+    const pinInput  = document.getElementById('pin');
+    const watchBtn  = document.getElementById('watchBtn');
+    const roomNameEl = document.getElementById('roomName');
+    const pinShow   = document.getElementById('pinShow');
+    const qIndexEl  = document.getElementById('qIndex');
+    const qTotalEl  = document.getElementById('qTotal');
+    const listEl    = document.getElementById('list');
+    const stateText = document.getElementById('stateText');
+    const stateDot  = document.getElementById('stateDot');
+
+    // Podio refs
+    const bars = {1:document.getElementById('bar1'),2:document.getElementById('bar2'),3:document.getElementById('bar3')};
+    const stages = {1:document.getElementById('stage1'),2:document.getElementById('stage2'),3:document.getElementById('stage3')};
+    const avatars = {1:document.getElementById('av1'),2:document.getElementById('av2'),3:document.getElementById('av3')};
+    const tags = {1:document.getElementById('tag1'),2:document.getElementById('tag2'),3:document.getElementById('tag3')};
+    const labels = {1:document.getElementById('lb1'),2:document.getElementById('lb2'),3:document.getElementById('lb3')};
+
+    // === ESTADO ===
+    let roomId = null;
+    let prevOrder = [];      // orden previo por uid para detectar cambios de posición
+    let prevScores = {};     // puntajes previos para tween
+    const params = new URLSearchParams(location.search);
+    if (params.get('pin')) pinInput.value = params.get('pin');
+
+    // === CONFETTI simple ===
+    const cf = document.getElementById('confetti');
+    const ctx = cf.getContext('2d');
+    let confettiPieces = [];
+    function resizeCanvas(){ cf.width = innerWidth; cf.height = innerHeight; }
+    addEventListener('resize', resizeCanvas); resizeCanvas();
+    function launchConfetti(n=120){
+      for(let i=0;i<n;i++){
+        confettiPieces.push({
+          x: Math.random()*cf.width,
+          y: -10,
+          s: 2+Math.random()*4,
+          a: Math.random()*Math.PI*2,
+          v: 1+Math.random()*3,
+          c: `hsl(${Math.random()*360},90%,60%)`
+        });
+      }
+    }
+    function tickConfetti(){
+      ctx.clearRect(0,0,cf.width,cf.height);
+      confettiPieces.forEach(p=>{
+        p.y += p.v;
+        p.x += Math.sin(p.a+=0.05);
+        ctx.fillStyle = p.c;
+        ctx.fillRect(p.x,p.y,p.s,p.s);
+      });
+      confettiPieces = confettiPieces.filter(p=>p.y < cf.height+10);
+      requestAnimationFrame(tickConfetti);
+    }
+    tickConfetti();
+
+    // === UTIL ===
+    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+    const fmt = (n)=> (n||0).toLocaleString('es-EC');
+
+    function setStateBadge(state){
+      stateDot.className = 'stateDot';
+      if (state==='lobby') stateDot.classList.add('state-lobby');
+      else if (state==='asking') stateDot.classList.add('state-asking');
+      else if (state==='reveal') stateDot.classList.add('state-reveal');
+      else if (state==='ended') stateDot.classList.add('state-ended');
+      stateText.textContent = ({
+        lobby:'En sala', asking:'Pregunta en curso', reveal:'Mostrando respuesta', ended:'Finalizado'
+      }[state] || '—');
+    }
+
+    function initials(name='?'){
+      const parts = String(name).trim().split(/\s+/).slice(0,2);
+      return parts.map(p=>p[0]?.toUpperCase()||'').join('');
+    }
+
+    function tweenNumber(el, from, to, ms=600){
+      const start = performance.now();
+      function step(t){
+        const k = Math.min(1, (t-start)/ms);
+        const val = Math.round(from + (to-from)*k);
+        el.textContent = fmt(val);
+        if (k<1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function renderTop(playersArr){
+      // Ordenar por score
+      const sorted = [...playersArr].sort((a,b)=>(b.score||0)-(a.score||0));
+      const top5 = sorted.slice(0,5);
+      const top3 = sorted.slice(0,3);
+
+      // Detectar cambios de orden para confeti
+      const newOrder = top5.map(p=>p.uid);
+      const changedOrder = prevOrder.length && newOrder.some((u, i)=>u !== prevOrder[i]);
+      if (changedOrder) launchConfetti(80);
+      prevOrder = newOrder;
+
+      // Calcular altura relativa para podio
+      const maxScore = Math.max(1, top3[0]?.score || 1);
+      top3.forEach((p,ix)=>{
+        const pos = ix===0 ? 1 : (ix===1 ? 2 : 3); // 1=oro,2=plata,3=bronce
+        const pct = Math.max(5, Math.round((p.score||0)/maxScore*100)); // mínimo 5% visual
+        bars[pos].style.height = pct + '%';
+        stages[pos].style.setProperty('--h', `calc(${pct}% - 6px)`);
+        avatars[pos].textContent = initials(p.name);
+        labels[pos].textContent = p.name || '—';
+
+        // Puntaje con tween
+        const prev = prevScores[p.uid] ?? 0;
+        tweenNumber(tags[pos], prev, p.score||0, 700);
+        prevScores[p.uid] = p.score||0;
+
+        // Pequeño bump al actualizar
+        stages[pos].classList.remove('bump'); void stages[pos].offsetWidth; stages[pos].classList.add('bump');
+      });
+
+      // Rellenar si faltan jugadores para podio
+      for (const pos of [1,2,3]){
+        if (!top3[pos-1]){
+          bars[pos].style.height = '0%';
+          stages[pos].style.setProperty('--h', `0px`);
+          avatars[pos].textContent = '—';
+          labels[pos].textContent = '—';
+          tags[pos].textContent = '0';
+        }
+      }
+
+      // Lista Top 5
+      listEl.innerHTML = '';
+      const maxTopScore = Math.max(1, top5[0]?.score || 1);
+      top5.forEach((p,i)=>{
+        const row = document.createElement('div');
+        row.className = 'row rise';
+
+        const rk = document.createElement('div');
+        rk.className = 'rank';
+        rk.textContent = (i+1);
+
+        const nm = document.createElement('div');
+        nm.className = 'name';
+        nm.textContent = `${p.name || '—'}`;
+
+        const right = document.createElement('div');
+        right.style.display='grid'; right.style.gap='6px';
+
+        const barWrap = document.createElement('div');
+        barWrap.className = 'progressWrap';
+        const bar = document.createElement('div');
+        bar.className = 'progress';
+        bar.style.width = Math.round((p.score||0)/maxTopScore*100) + '%';
+        barWrap.appendChild(bar);
+
+        const score = document.createElement('div');
+        score.className = 'score';
+        score.textContent = fmt(p.score||0);
+
+        right.appendChild(barWrap);
+        right.appendChild(score);
+
+        row.appendChild(rk);
+        row.appendChild(nm);
+        row.appendChild(right);
+
+        listEl.appendChild(row);
+      });
+    }
+
+    async function watchRoom(){
+      const pin = (pinInput.value||'').trim();
+      if (!/^[0-9]{6}$/.test(pin)) { alert('PIN inválido (6 dígitos).'); return; }
+      roomId = pin;
+      pinShow.textContent = pin;
+
+      // snapshot inicial (nombre y total preguntas)
+      const first = await get(ref(db, 'rooms/'+roomId));
+      if (!first.exists()){ alert('Sala no encontrada.'); return; }
+
+      onValue(ref(db,'rooms/'+roomId), (snap)=>{
+        const data = snap.val(); if (!data) return;
+
+        roomNameEl.textContent = data.name || '—';
+        setStateBadge(data.state);
+        const qi = data.questionIndex || 0;
+        qIndexEl.textContent = String(qi+1);
+        qTotalEl.textContent = String((data.questions?.length)||'—');
+
+        // jugadores
+        const arr = Object.entries(data.players || {}).map(([uid,p])=>({uid, ...p}));
+        renderTop(arr);
+
+        // Celebración al finalizar
+        if (data.state === 'ended') launchConfetti(160);
+      });
+    }
+
+    // UI
+    watchBtn.addEventListener('click', watchRoom);
+    pinInput.addEventListener('keydown', (e)=>{ if (e.key==='Enter') watchRoom(); });
+
+    // Autocargar por ?pin
+    if (pinInput.value) watchRoom();
+  </script>
+</body>
+</html>

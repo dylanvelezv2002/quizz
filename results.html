@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Ruleta Quiz — Resultados en Vivo</title>
+  <title>Ruleta Quiz — Resultados (Total del Juego)</title>
   <meta name="theme-color" content="#0ea5e9"/>
   <style>
     :root{
@@ -50,9 +50,7 @@
       background:linear-gradient(135deg,var(--brand),var(--brand2)); height:0%;
       transition:height .8s cubic-bezier(.2,.8,.2,1);
     }
-    .crown{
-      position:absolute; top:8px; font-size:22px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6));
-    }
+    .crown{position:absolute; top:8px; font-size:22px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6));}
     .medal{position:absolute; top:10px; right:10px; font-size:18px}
     .m1{color:var(--gold)} .m2{color:var(--silver)} .m3{color:var(--bronze)}
     .avatar{
@@ -71,7 +69,7 @@
       transition:bottom .8s cubic-bezier(.2,.8,.2,1);
     }
 
-    /* Top5 Lista */
+    /* Top 5 Lista */
     .list{display:grid; gap:8px}
     .row{
       display:grid; grid-template-columns: 32px 1fr 120px; gap:10px; align-items:center;
@@ -86,9 +84,7 @@
     .progress{height:100%; width:0%; background:linear-gradient(90deg,var(--brand),var(--brand2)); transition:width .8s ease}
     .score{font-variant-numeric: tabular-nums; font-weight:900; text-align:right}
 
-    .status{
-      display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted)
-    }
+    .status{display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted)}
     .stateDot{width:8px; height:8px; border-radius:50%}
     .state-lobby{background:var(--brand)}
     .state-asking{background:var(--warn)}
@@ -102,13 +98,11 @@
     button{cursor:pointer; border:none; background:linear-gradient(135deg,var(--brand),var(--brand2)); font-weight:800}
     button:active{transform:scale(.98)}
 
-    /* Animaciones sutiles */
     .bump{animation: bump .4s ease}
     @keyframes bump{0%{transform:scale(1)}50%{transform:scale(1.04)}100%{transform:scale(1)}}
     .rise{animation: rise .8s ease}
     @keyframes rise{from{transform:translateY(8px); opacity:.6}to{transform:translateY(0);opacity:1}}
 
-    /* Canvas confeti al fondo */
     #confetti{position:fixed; inset:0; pointer-events:none; z-index:0}
   </style>
 </head>
@@ -117,8 +111,8 @@
 
   <header>
     <div>
-      <div class="title">🎉 Resultados en Vivo — Ruleta Quiz</div>
-      <div class="subtitle">Podio dinámico + Top 5. Se actualiza en tiempo real.</div>
+      <div class="title">🏆 Resultados Totales — Ruleta Quiz</div>
+      <div class="subtitle">Podio + Top 5 actualizados en tiempo real (puntaje acumulado).</div>
     </div>
     <div class="controls">
       <input id="pin" placeholder="PIN (6 dígitos)" inputmode="numeric" maxlength="6"/>
@@ -134,16 +128,16 @@
     <section class="card">
       <div class="status" style="justify-content:space-between">
         <div>📌 Sala: <strong id="roomName">—</strong> • <span class="badge">PIN</span> <strong id="pinShow">—</strong></div>
-        <div>Pregunta <strong id="qIndex">—</strong> / <span id="qTotal">—</span></div>
+        <!-- Quitamos el contador de “Pregunta X / Y” -->
+        <div id="phaseText">En curso (acumulado)</div>
       </div>
     </section>
 
     <section class="layout">
       <!-- Podio -->
       <section class="card">
-        <h3 style="margin:0 0 10px 0">🥇 Podio</h3>
+        <h3 style="margin:0 0 10px 0">🥇 Podio (Total acumulado)</h3>
         <div class="podium">
-          <!-- 2do -->
           <div class="stage" id="stage2" style="--h: 0px">
             <div class="bar" id="bar2"></div>
             <div class="avatar" id="av2">—</div>
@@ -151,7 +145,6 @@
             <div class="medal m2">🥈</div>
             <div class="label" id="lb2">—</div>
           </div>
-          <!-- 1ro -->
           <div class="stage" id="stage1" style="--h: 0px">
             <div class="bar" id="bar1"></div>
             <div class="crown">👑</div>
@@ -160,7 +153,6 @@
             <div class="medal m1">🥇</div>
             <div class="label" id="lb1">—</div>
           </div>
-          <!-- 3ro -->
           <div class="stage" id="stage3" style="--h: 0px">
             <div class="bar" id="bar3"></div>
             <div class="avatar" id="av3">—</div>
@@ -171,20 +163,19 @@
         </div>
       </section>
 
-      <!-- Top 5 lista con barras -->
+      <!-- Top 5 -->
       <section class="card">
-        <h3 style="margin:0 0 10px 0">🏆 Top 5</h3>
+        <h3 style="margin:0 0 10px 0">🏅 Top 5 (Total acumulado)</h3>
         <div class="list" id="list"></div>
       </section>
     </section>
   </main>
 
-  <!-- Firebase + lógica -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
     import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-    // === CONFIG FIREBASE ===
+    // === CONFIG ===
     const firebaseConfig = {
       apiKey: "AIzaSyDDWj49V7myELlBoHQ9dgVKxz163FJyjEc",
       authDomain: "ruleta-quiz.firebaseapp.com",
@@ -202,13 +193,11 @@
     const watchBtn  = document.getElementById('watchBtn');
     const roomNameEl = document.getElementById('roomName');
     const pinShow   = document.getElementById('pinShow');
-    const qIndexEl  = document.getElementById('qIndex');
-    const qTotalEl  = document.getElementById('qTotal');
     const listEl    = document.getElementById('list');
     const stateText = document.getElementById('stateText');
     const stateDot  = document.getElementById('stateDot');
+    const phaseText = document.getElementById('phaseText');
 
-    // Podio refs
     const bars = {1:document.getElementById('bar1'),2:document.getElementById('bar2'),3:document.getElementById('bar3')};
     const stages = {1:document.getElementById('stage1'),2:document.getElementById('stage2'),3:document.getElementById('stage3')};
     const avatars = {1:document.getElementById('av1'),2:document.getElementById('av2'),3:document.getElementById('av3')};
@@ -217,12 +206,12 @@
 
     // === ESTADO ===
     let roomId = null;
-    let prevOrder = [];      // orden previo por uid para detectar cambios de posición
-    let prevScores = {};     // puntajes previos para tween
+    let prevOrder = [];
+    let prevScores = {};
     const params = new URLSearchParams(location.search);
     if (params.get('pin')) pinInput.value = params.get('pin');
 
-    // === CONFETTI simple ===
+    // Confeti simple
     const cf = document.getElementById('confetti');
     const ctx = cf.getContext('2d');
     let confettiPieces = [];
@@ -231,11 +220,8 @@
     function launchConfetti(n=120){
       for(let i=0;i<n;i++){
         confettiPieces.push({
-          x: Math.random()*cf.width,
-          y: -10,
-          s: 2+Math.random()*4,
-          a: Math.random()*Math.PI*2,
-          v: 1+Math.random()*3,
+          x: Math.random()*cf.width, y: -10, s: 2+Math.random()*4,
+          a: Math.random()*Math.PI*2, v: 1+Math.random()*3,
           c: `hsl(${Math.random()*360},90%,60%)`
         });
       }
@@ -243,19 +229,16 @@
     function tickConfetti(){
       ctx.clearRect(0,0,cf.width,cf.height);
       confettiPieces.forEach(p=>{
-        p.y += p.v;
-        p.x += Math.sin(p.a+=0.05);
-        ctx.fillStyle = p.c;
-        ctx.fillRect(p.x,p.y,p.s,p.s);
+        p.y += p.v; p.x += Math.sin(p.a+=0.05);
+        ctx.fillStyle = p.c; ctx.fillRect(p.x,p.y,p.s,p.s);
       });
       confettiPieces = confettiPieces.filter(p=>p.y < cf.height+10);
       requestAnimationFrame(tickConfetti);
     }
     tickConfetti();
 
-    // === UTIL ===
-    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
     const fmt = (n)=> (n||0).toLocaleString('es-EC');
+    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
 
     function setStateBadge(state){
       stateDot.className = 'stateDot';
@@ -266,6 +249,10 @@
       stateText.textContent = ({
         lobby:'En sala', asking:'Pregunta en curso', reveal:'Mostrando respuesta', ended:'Finalizado'
       }[state] || '—');
+
+      // Texto del panel superior (si hay final, deja claro que son resultados finales)
+      if (state === 'ended') phaseText.textContent = 'Resultados finales (total acumulado)';
+      else phaseText.textContent = 'En curso (total acumulado)';
     }
 
     function initials(name='?'){
@@ -285,37 +272,35 @@
     }
 
     function renderTop(playersArr){
-      // Ordenar por score
+      // Ordenar por TOTAL acumulado
       const sorted = [...playersArr].sort((a,b)=>(b.score||0)-(a.score||0));
       const top5 = sorted.slice(0,5);
       const top3 = sorted.slice(0,3);
 
-      // Detectar cambios de orden para confeti
+      // Confeti si cambian posiciones
       const newOrder = top5.map(p=>p.uid);
       const changedOrder = prevOrder.length && newOrder.some((u, i)=>u !== prevOrder[i]);
       if (changedOrder) launchConfetti(80);
       prevOrder = newOrder;
 
-      // Calcular altura relativa para podio
+      // Altura relativa del podio con base en TOTAL acumulado
       const maxScore = Math.max(1, top3[0]?.score || 1);
       top3.forEach((p,ix)=>{
-        const pos = ix===0 ? 1 : (ix===1 ? 2 : 3); // 1=oro,2=plata,3=bronce
-        const pct = Math.max(5, Math.round((p.score||0)/maxScore*100)); // mínimo 5% visual
+        const pos = ix===0 ? 1 : (ix===1 ? 2 : 3);
+        const pct = Math.max(5, Math.round((p.score||0)/maxScore*100));
         bars[pos].style.height = pct + '%';
         stages[pos].style.setProperty('--h', `calc(${pct}% - 6px)`);
         avatars[pos].textContent = initials(p.name);
         labels[pos].textContent = p.name || '—';
 
-        // Puntaje con tween
         const prev = prevScores[p.uid] ?? 0;
         tweenNumber(tags[pos], prev, p.score||0, 700);
         prevScores[p.uid] = p.score||0;
 
-        // Pequeño bump al actualizar
         stages[pos].classList.remove('bump'); void stages[pos].offsetWidth; stages[pos].classList.add('bump');
       });
 
-      // Rellenar si faltan jugadores para podio
+      // limpiar si faltan
       for (const pos of [1,2,3]){
         if (!top3[pos-1]){
           bars[pos].style.height = '0%';
@@ -326,7 +311,7 @@
         }
       }
 
-      // Lista Top 5
+      // Lista Top 5 (TOTAL)
       listEl.innerHTML = '';
       const maxTopScore = Math.max(1, top5[0]?.score || 1);
       top5.forEach((p,i)=>{
@@ -372,7 +357,7 @@
       roomId = pin;
       pinShow.textContent = pin;
 
-      // snapshot inicial (nombre y total preguntas)
+      // Carga inicial
       const first = await get(ref(db, 'rooms/'+roomId));
       if (!first.exists()){ alert('Sala no encontrada.'); return; }
 
@@ -381,15 +366,12 @@
 
         roomNameEl.textContent = data.name || '—';
         setStateBadge(data.state);
-        const qi = data.questionIndex || 0;
-        qIndexEl.textContent = String(qi+1);
-        qTotalEl.textContent = String((data.questions?.length)||'—');
 
-        // jugadores
+        // TOMAMOS TOTAL ACUMULADO directamente de players/*/score
         const arr = Object.entries(data.players || {}).map(([uid,p])=>({uid, ...p}));
         renderTop(arr);
 
-        // Celebración al finalizar
+        // Celebración si finaliza
         if (data.state === 'ended') launchConfetti(160);
       });
     }
@@ -398,8 +380,9 @@
     watchBtn.addEventListener('click', watchRoom);
     pinInput.addEventListener('keydown', (e)=>{ if (e.key==='Enter') watchRoom(); });
 
-    // Autocargar por ?pin
-    if (pinInput.value) watchRoom();
+    // ?pin=XXXXXX
+    const params = new URLSearchParams(location.search);
+    if (params.get('pin')) { pinInput.value = params.get('pin'); watchRoom(); }
   </script>
 </body>
 </html>

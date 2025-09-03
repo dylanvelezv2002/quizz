@@ -308,22 +308,51 @@
         t--; timerEl.textContent = t;
         if (t<=0){
           clearInterval(timerInterval);
-          await handleTimeUpAdvance();
+          await handleTimeUpAdvance(); // revela → espera → avanza e inicia
         }
       },1000);
     }
 
-    // Maneja “se acabó el tiempo”: revela -> espera -> avanza
+    // Maneja “se acabó el tiempo”: revela -> espera -> AVANZA E INICIA la siguiente
     async function handleTimeUpAdvance(){
       if (isAutoAdvancing) return;
       isAutoAdvancing = true;
       try{
         await revealCorrect();              // puntúa y publica awards
         await sleep(AUTO_ADVANCE_DELAY);    // deja ver animaciones en clientes
-        await nextQuestion();               // avanza o termina
+        await advanceAndStart();            // avanza índice y empieza la siguiente
       } finally {
         isAutoAdvancing = false;
       }
+    }
+
+    // Avanza a la siguiente pregunta e inicia el conteo automáticamente
+    async function advanceAndStart(){
+      const snap = await get(ref(db,'rooms/'+roomId));
+      const data = snap.val(); if(!data) return;
+
+      let nextQi = (data.questionIndex || 0) + 1;
+
+      // Si ya no hay más preguntas -> terminar
+      if (nextQi >= (data.questions?.length || 0)){
+        await setState('ended');
+        clearInterval(timerInterval);
+        return;
+      }
+
+      // Mover índice
+      await setQuestionIndex(nextQi);
+
+      // Limpiar respuestas/awards de la NUEVA pregunta (por seguridad)
+      await remove(child(ref(db), 'rooms/'+roomId+'/answers/'+nextQi)).catch(()=>{});
+      await remove(child(ref(db), 'rooms/'+roomId+'/awards/'+nextQi)).catch(()=>{});
+
+      // Cambiar a 'asking' e iniciar conteo automático
+      const secs = data.questionTime || 25;
+      answersStatsEl.textContent = 'Aún sin respuestas…';
+      timerEl.textContent = secs;
+      await setState('asking');
+      startTimer(secs);
     }
 
     async function startQuestion(){
@@ -368,6 +397,7 @@
       await update(ref(db,'rooms/'+roomId), { state: 'reveal' });
     }
 
+    // (Se mantiene para control manual si lo deseas)
     async function nextQuestion(){
       const snap = await get(ref(db,'rooms/'+roomId));
       const data = snap.val(); if(!data) return;
@@ -399,7 +429,8 @@
     // Eventos
     createRoomBtn.addEventListener('click', createRoom);
     prevBtn.addEventListener('click', prevQuestion);
-    nextBtn.addEventListener('click', nextQuestion);
+    // Botón “Siguiente” ahora hace el flujo automático de avanzar e iniciar
+    nextBtn.addEventListener('click', advanceAndStart);
     startQBtn.addEventListener('click', startQuestion);
     revealBtn.addEventListener('click', revealCorrect);
     endBtn.addEventListener('click', endGame);

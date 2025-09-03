@@ -12,6 +12,7 @@
       --text:#e2e8f0; --muted:#94a3b8;
       --brand:#0ea5e9; --brand-2:#22d3ee;
       --ok:#22c55e; --bad:#ef4444; --pill:#111827;
+      --warn:#eab308;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -28,7 +29,7 @@
     .badge{background:#1f2937;border:1px solid var(--border);padding:4px 8px;border-radius:999px;font-size:12px}
     .title{font-weight:800; letter-spacing:.3px}
     .subtitle{color:var(--muted); font-size:13px}
-    main{max-width:720px; margin:24px auto; padding:0 16px}
+    main{max-width:760px; margin:24px auto; padding:0 16px}
     .card{
       background:rgba(2,6,23,.6); border:1px solid var(--border); border-radius:16px;
       padding:18px; margin-bottom:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);
@@ -51,16 +52,49 @@
     .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
     @media (max-width:640px){ .row{grid-template-columns:1fr} }
     .pill{display:inline-flex;gap:8px;align-items:center;background:var(--pill);border:1px solid var(--border);padding:6px 10px;border-radius:999px}
-    .opt{width:100%; text-align:left; border:1px solid var(--border); background:var(--card);}
+    .opt{
+      width:100%; text-align:left; border:1px solid var(--border); background:var(--card);
+      border-radius:12px; padding:12px 14px; transition:transform .05s ease, border-color .2s ease, background .2s ease;
+    }
+    .opt:hover{transform:translateY(-1px)}
     .opt.chosen{outline:2px solid var(--brand)}
-    .opt.correct{border-color:var(--ok)}
-    .opt.wrong{border-color:var(--bad)}
+    .opt.correct{border-color:var(--ok); box-shadow:0 0 0 1px rgba(34,197,94,.25) inset}
+    .opt.wrong{border-color:var(--bad); box-shadow:0 0 0 1px rgba(239,68,68,.25) inset}
     .timer{
       font-variant-numeric: tabular-nums; font-weight:800; letter-spacing:.5px;
       background:linear-gradient(135deg,var(--brand),var(--brand-2)); -webkit-background-clip:text; background-clip:text; color:transparent;
     }
     .center{text-align:center}
     .footer-note{font-size:12px;color:var(--muted)}
+
+    /* Barra de progreso del tiempo */
+    .timebar{position:relative; height:8px; border-radius:999px; background:#0a1220; border:1px solid var(--border); overflow:hidden}
+    .timefill{position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg,var(--brand),var(--brand-2));}
+
+    /* Toast + confeti */
+    .toast {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      pointer-events: none; z-index: 50; font-weight: 800; font-size: 28px;
+    }
+    .toast .msg { padding: 14px 18px; border-radius: 16px; border: 1px solid var(--border); background: #0b1220; }
+    .toast.ok   { color: var(--ok); }
+    .toast.bad  { color: var(--bad); }
+    .pulse { animation: pulse 0.9s ease-in-out 2; }
+    .shake { animation: shake 0.6s ease-in-out 2; }
+    @keyframes pulse { 0% { transform: scale(1) } 50% { transform: scale(1.08) } 100% { transform: scale(1) } }
+    @keyframes shake { 0%,100%{ transform: translateX(0) } 25%{ transform: translateX(-6px) } 75%{ transform: translateX(6px) } }
+    .burst { position: fixed; left: 50%; top: 45%; transform: translate(-50%,-50%); font-size: 22px; pointer-events:none; z-index: 60; }
+
+    /* Etiqueta de puntos flotante sobre el botón elegido */
+    .fly-points{
+      position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      font-weight:800; font-size:14px; color:var(--ok); opacity:0; animation: fly 1.4s ease forwards;
+    }
+    @keyframes fly {
+      0% { opacity:0; transform:translateY(-50%) scale(.9) }
+      20%{ opacity:1; transform:translateY(-60%) scale(1) }
+      100%{ opacity:0; transform:translate(-10px,-120%) scale(1.1) }
+    }
   </style>
 </head>
 <body>
@@ -105,8 +139,9 @@
         <div class="pill">Tiempo: <span class="timer" id="timer">—</span>s</div>
         <div class="pill">Pregunta <span id="qIndex">—</span></div>
       </div>
+      <div class="timebar" style="margin:12px 0 6px"><div class="timefill" id="timeFill"></div></div>
       <h3 id="qText" style="margin-top:10px">—</h3>
-      <div class="grid" id="qOptions" style="margin-top:12px"></div>
+      <div class="grid" id="qOptions" style="margin-top:12px; position:relative"></div>
       <div class="muted" id="answerMsg" style="margin-top:10px">—</div>
     </section>
 
@@ -130,7 +165,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
     import { getDatabase, ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-    // ====== TU CONFIGURACIÓN (con databaseURL de tu proyecto) ======
+    // ====== CONFIGURACIÓN ======
     const firebaseConfig = {
       apiKey: "AIzaSyDDWj49V7myELlBoHQ9dgVKxz163FJyjEc",
       authDomain: "ruleta-quiz.firebaseapp.com",
@@ -161,6 +196,7 @@
     const timerEl = document.getElementById('timer');
     const answerMsg = document.getElementById('answerMsg');
     const revealMsg = document.getElementById('revealMsg');
+    const timeFill = document.getElementById('timeFill');
 
     // ====== ESTADO LOCAL ======
     let roomId = null;
@@ -169,6 +205,8 @@
     let lastQIndex = -1;
     let localTimer = null;
     let myAnswer = null;
+    let currentSeconds = 0;
+    let chosenBtn = null;
 
     const params = new URLSearchParams(location.search);
     if (params.get('pin')) pinInput.value = params.get('pin');
@@ -190,6 +228,40 @@
     function show(card){
       [joinCard,lobbyCard,questionCard,revealCard,endCard].forEach(c => c.style.display='none');
       card.style.display = 'block';
+    }
+
+    // ==== UI helpers para feedback =====
+    function showToast(ok, points){
+      // Limpia anteriores
+      document.querySelectorAll('.toast,.burst').forEach(el=>el.remove());
+
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + (ok ? 'ok' : 'bad');
+      const msg = document.createElement('div');
+      msg.className = 'msg ' + (ok ? 'pulse' : 'shake');
+      msg.textContent = ok ? (points ? `¡Correcto! +${points}` : '¡Correcto!') : 'Incorrecto';
+      toast.appendChild(msg);
+      document.body.appendChild(toast);
+
+      // confeti emoji simple si ok
+      if (ok){
+        const burst = document.createElement('div');
+        burst.className = 'burst';
+        burst.textContent = '🎉 🎉 🎉';
+        document.body.appendChild(burst);
+        setTimeout(()=> burst.remove(), 1200);
+      }
+      setTimeout(()=> toast.remove(), 1800);
+    }
+
+    function flyPointsOverChosen(points){
+      if (!chosenBtn || !points) return;
+      const tag = document.createElement('div');
+      tag.className = 'fly-points';
+      tag.textContent = `+${points}`;
+      chosenBtn.style.position = 'relative';
+      chosenBtn.appendChild(tag);
+      setTimeout(()=> tag.remove(), 1400);
     }
 
     // ====== UNIRSE ======
@@ -227,6 +299,18 @@
         const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
         myAnswer = answers[uid];
 
+        // Cuando el host está en "reveal", buscamos el premio para este jugador
+        if (state === 'reveal' && q){
+          const awards = (data.awards && data.awards[qi]) ? data.awards[qi] : {};
+          const myAward = awards[uid]; // 100 o 0 (o undefined si no respondió)
+          renderReveal(q, myAward);
+          if (typeof myAward !== 'undefined'){
+            const ok = myAward > 0;
+            showToast(ok, myAward);
+            flyPointsOverChosen(myAward);
+          }
+        }
+
         // Nuevo estado -> render
         if (state === 'lobby'){
           stopLocalTimer();
@@ -236,9 +320,6 @@
           if (lastState !== 'asking' || lastQIndex !== qi){
             startLocalTimer(data.questionTime || 25);
           }
-        } else if (state === 'reveal' && q){
-          stopLocalTimer();
-          renderReveal(q);
         } else if (state === 'ended'){
           stopLocalTimer();
           renderEnded();
@@ -255,6 +336,8 @@
       qOptionsEl.innerHTML = '';
       timerEl.textContent = '—';
       answerMsg.textContent = '—';
+      timeFill.style.width = '0%';
+      chosenBtn = null;
     }
 
     function renderQuestion(q, qi, seconds){
@@ -262,26 +345,47 @@
       qIndexEl.textContent = (qi+1);
       qTextEl.textContent = q.texto || '—';
       timerEl.textContent = seconds;
+      currentSeconds = seconds;
+      timeFill.style.width = '100%';
 
       qOptionsEl.innerHTML = '';
+      chosenBtn = null;
+
       (q.opciones || []).forEach((op, idx) => {
         const b = document.createElement('button');
         b.className = 'opt';
         b.textContent = String.fromCharCode(65+idx) + ') ' + op;
         b.disabled = typeof myAnswer === 'number';
-        if (typeof myAnswer === 'number' && myAnswer === idx) b.classList.add('chosen');
-        b.onclick = () => submitAnswer(idx);
+        if (typeof myAnswer === 'number' && myAnswer === idx){
+          b.classList.add('chosen');
+          chosenBtn = b;
+        }
+        b.onclick = () => submitAnswer(idx, b);
         qOptionsEl.appendChild(b);
       });
 
       answerMsg.textContent = (typeof myAnswer === 'number') ? 'Respuesta enviada.' : 'Elige una opción.';
     }
 
-    function renderReveal(q){
+    function renderReveal(q, myAward){
       show(revealCard);
       const correct = q.correcta;
+
+      // Pintar opciones (correcta/errónea) en la tarjeta de pregunta (si aún está visible en DOM)
+      if (qOptionsEl.children.length){
+        Array.from(qOptionsEl.children).forEach((btn, i)=>{
+          if (i === correct) btn.classList.add('correct');
+          if (typeof myAnswer === 'number' && myAnswer === i && myAnswer !== correct){
+            btn.classList.add('wrong');
+          }
+          btn.disabled = true;
+        });
+      }
+
       if (typeof myAnswer === 'number'){
-        revealMsg.textContent = (myAnswer === correct) ? '✅ ¡Correcto!' : '❌ Incorrecto.';
+        revealMsg.textContent = (myAnswer === correct)
+          ? (typeof myAward === 'number' ? `✅ ¡Correcto! +${myAward}` : '✅ ¡Correcto!')
+          : '❌ Incorrecto.';
       } else {
         revealMsg.textContent = '⏳ No alcanzaste a responder.';
       }
@@ -291,13 +395,21 @@
       show(endCard);
     }
 
-    // ====== TIMER LOCAL (visual, no bloqueante) ======
+    // ====== TIMER LOCAL (visual) ======
     function startLocalTimer(t){
       stopLocalTimer();
-      timerEl.textContent = t;
+      let remaining = t;
+      timerEl.textContent = remaining;
+      timeFill.style.transition = 'width 1s linear';
+      timeFill.style.width = '100%';
       localTimer = setInterval(() => {
-        t--; timerEl.textContent = Math.max(0, t);
-        if (t <= 0) stopLocalTimer();
+        remaining--;
+        timerEl.textContent = Math.max(0, remaining);
+        const pct = Math.max(0, Math.round((remaining / t) * 100));
+        timeFill.style.width = pct + '%';
+        // Color de advertencia al 25%
+        if (pct <= 25) timeFill.style.background = `linear-gradient(90deg,var(--warn),var(--bad))`;
+        if (remaining <= 0) stopLocalTimer();
       }, 1000);
     }
     function stopLocalTimer(){
@@ -305,7 +417,7 @@
     }
 
     // ====== ENVIAR RESPUESTA ======
-    async function submitAnswer(idx){
+    async function submitAnswer(idx, btnRef){
       // Lee estado actual
       const snap = await get(ref(db, 'rooms/' + roomId));
       if (!snap.exists()) return;
@@ -321,11 +433,11 @@
         if (i === idx) b.classList.add('chosen');
       });
       answerMsg.textContent = 'Respuesta enviada.';
+      chosenBtn = btnRef;
     }
 
     // ====== EVENTOS ======
     joinBtn.addEventListener('click', joinRoom);
-    // Enter para comodidad
     [pinInput, nameInput].forEach(inp => inp.addEventListener('keydown', e=>{
       if (e.key === 'Enter') joinRoom();
     }));

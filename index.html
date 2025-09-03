@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Evaluación de Vulnerabilidades — Ruleta Quiz</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg1:#0f172a; --bg2:#0b1220; --panel:#111827;
+      --line:#334155; --text:#e2e8f0; --muted:#94a3b8; --primary:#22d3ee; --accent:#818cf8;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text); background: radial-gradient(1200px 800px at 10% 10%, rgba(130,87,229,.15), transparent 60%),
+                          radial-gradient(1000px 1000px at 90% 20%, rgba(34,211,238,.1), transparent 60%),
+                          linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow-x:hidden;
+    }
+    .container{max-width:960px;margin:0 auto;padding:24px}
+    header{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{
+      width:40px;height:40px;border-radius:12px;
+      background: conic-gradient(from 180deg, var(--primary), var(--accent), var(--primary));
+      box-shadow:0 0 24px rgba(129,140,248,.35), inset 0 0 24px rgba(34,211,238,.25);
+      animation:spin 8s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .tag{color:var(--muted);font-size:14px}
+    .hero{
+      margin-top:32px; display:grid; grid-template-columns:1.05fr .95fr; gap:24px;
+    }
+    @media (max-width:900px){.hero{grid-template-columns:1fr}}
+    h1{font-size:clamp(26px, 4vw, 40px);line-height:1.1;margin:0}
+    p.lead{color:var(--muted);margin:10px 0 0 0;font-size:clamp(14px, 2.4vw, 17px)}
+    .card{
+      background:rgba(17,24,39,.75); border:1px solid var(--line);
+      border-radius:16px; padding:16px; backdrop-filter: blur(6px);
+      box-shadow:0 10px 30px rgba(2,6,23,.35);
+    }
+    label{display:block;margin-bottom:6px;color:var(--muted)}
+    input,button{
+      width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);
+      background:#0b1220;color:var(--text)
+    }
+    input:focus{outline:none;border-color:#475569;box-shadow:0 0 0 3px rgba(129,140,248,.18)}
+    .btn{
+      background:linear-gradient(135deg, var(--accent), var(--primary));
+      border:none;font-weight:700;letter-spacing:.2px;cursor:pointer;
+      transition:transform .06s ease, filter .2s ease; margin-top:8px;
+    }
+    .btn:hover{filter:brightness(1.03)}
+    .btn:active{transform:scale(.98)}
+    .muted{color:var(--muted);font-size:13px}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;background:#0b1220;border:1px solid var(--line)}
+    .floating{
+      position:absolute; inset:auto; pointer-events:none; z-index:-1; opacity:.55;
+      filter:blur(30px); mix-blend:screen;
+    }
+    .b1{top:-60px;left:-60px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle at 30% 30%, #22d3ee66, transparent 55%)}
+    .b2{bottom:-80px;right:-60px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle at 60% 60%, #818cf866, transparent 55%)}
+    footer{margin-top:28px;color:var(--muted);font-size:13px;display:flex;gap:10px;flex-wrap:wrap}
+    a{color:#93c5fd;text-decoration:none}
+    a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="floating b1"></div>
+  <div class="floating b2"></div>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <strong>Ruleta Quiz</strong><div class="tag">Evaluación de Vulnerabilidades</div>
+        </div>
+      </div>
+      <div class="pill">🎡 Interactivo • 📱 Multi-dispositivo</div>
+    </header>
+
+    <section class="hero">
+      <div class="card">
+        <h1>Participa en el Quiz<br/>de <span style="background:linear-gradient(90deg,#22d3ee,#818cf8);-webkit-background-clip:text;background-clip:text;color:transparent">Evaluación de Vulnerabilidades</span></h1>
+        <p class="lead">Ingresa tu nombre y el PIN que el docente muestra en pantalla. Responde desde tu celular o laptop y compite por estar en el Top 5. ¡Éxitos! 💪</p>
+        <form id="joinForm" style="margin-top:16px">
+          <label for="name">Tu nombre</label>
+          <input id="name" placeholder="Ej. Ana C." required />
+          <label for="pin" style="margin-top:10px">PIN de la sala</label>
+          <input id="pin" placeholder="Ej. 123456" inputmode="numeric" required />
+          <button class="btn" type="submit">Unirme al Quiz</button>
+          <div class="muted" style="margin-top:8px">Al continuar irás a la sala de respuestas.</div>
+        </form>
+      </div>
+      <div class="card" style="min-height:100%;display:flex;align-items:center;justify-content:center;text-align:center">
+        <div>
+          <img alt="ruleta" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Font_Awesome_5_solid_dice.svg/512px-Font_Awesome_5_solid_dice.svg.png" style="width:120px;opacity:.85;filter:drop-shadow(0 10px 25px rgba(129,140,248,.35));margin-bottom:10px"/>
+          <p class="muted">El docente controla la ruleta, muestra cada pregunta y publica el ranking final.</p>
+          <p class="muted" style="margin-top:8px">Consejo: verifica tu conexión a internet y mantén esta pestaña activa mientras respondes.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>¿Eres docente?</span>
+      <a href="./host.html">Abrir panel del docente (host)</a>
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById('joinForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const name = encodeURIComponent(document.getElementById('name').value.trim());
+      const pin  = encodeURIComponent(document.getElementById('pin').value.trim());
+      if(!name || !pin){ return; }
+      window.location.href = `./join.html?pin=${pin}&name=${name}`;
+    });
+  </script>
+</body>
+</html>

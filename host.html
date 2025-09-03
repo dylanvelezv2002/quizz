@@ -1,391 +1,375 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Host — Ruleta Quiz (Evaluación de Vulnerabilidades)</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
-  :root{--bg:#0f172a;--panel:#111827;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--btn:#2563eb}
-  *{box-sizing:border-box}
-  body{margin:0;background:linear-gradient(180deg,#0b1220,#0f172a);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-  header{padding:16px 20px;background:#0b1020;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  h1{font-size:20px;margin:0}
-  main{max-width:1150px;margin:0 auto;padding:20px}
-  .card{background:rgba(17,24,39,.85);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;backdrop-filter:blur(6px)}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media (max-width:900px){.row{grid-template-columns:1fr}}
-  label{display:block;margin-bottom:6px;color:var(--muted)}
-  input, textarea, button{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--text)}
-  textarea{min-height:180px;resize:vertical}
-  button{background:var(--btn);border:none;font-weight:700;cursor:pointer}
-  button:hover{filter:brightness(1.05)}
-  .muted{color:var(--muted);font-size:14px}
-  .players{display:flex;flex-wrap:wrap;gap:8px}
-  .pill{background:#0b1220;border:1px solid var(--line);padding:8px 12px;border-radius:999px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .qbox{padding:12px;border-radius:12px;background:#0b1220;border:1px solid var(--line)}
-  .answers button{width:auto;margin-right:8px;margin-top:8px}
-  table{width:100%;border-collapse:collapse}
-  th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
-  .badge{padding:4px 8px;border-radius:8px;background:#1f2937;font-size:12px}
-  .inline{display:inline-flex;gap:8px;align-items:center}
-  .center{text-align:center}
-  code{background:#0b1220;border:1px solid var(--line);padding:4px 6px;border-radius:6px}
-</style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Ruleta Quiz — Docente</title>
+  <meta name="theme-color" content="#0ea5e9"/>
+  <style>
+    :root{
+      --bg1:#0f172a; --bg2:#020617; --card:#0b1220; --border:#334155;
+      --text:#e2e8f0; --muted:#94a3b8; --brand:#0ea5e9; --brand2:#22d3ee;
+      --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(1200px 600px at 80% -10%,rgba(14,165,233,.25),transparent),
+                  radial-gradient(800px 400px at -10% 110%,rgba(34,211,238,.2),transparent),
+                  linear-gradient(160deg,var(--bg1),var(--bg2));
+    }
+    header{position:sticky;top:0;z-index:10;display:flex;gap:12px;align-items:center;
+      padding:14px 18px;border-bottom:1px solid var(--border);background:rgba(2,6,23,.5);backdrop-filter:blur(6px)}
+    .title{font-weight:800}
+    .muted{color:var(--muted)}
+    main{max-width:1100px;margin:20px auto;padding:0 16px}
+    .card{background:rgba(2,6,23,.6);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:960px){ .grid2{grid-template-columns:1fr} }
+    @media (max-width:640px){ .row{grid-template-columns:1fr} }
+    label{display:block;margin-bottom:6px;color:var(--muted)}
+    input,textarea,button{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--border);
+      background:var(--card);color:var(--text);font-size:16px}
+    textarea{min-height:140px;resize:vertical}
+    button{cursor:pointer;border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));font-weight:700}
+    button:active{transform:scale(.98)}
+    button[disabled]{opacity:.6;cursor:not-allowed}
+    .pill{display:inline-flex;gap:8px;align-items:center;background:#111827;border:1px solid var(--border);
+      padding:6px 10px;border-radius:999px}
+    .players{display:flex;flex-wrap:wrap;gap:8px}
+    .answers button{width:auto;margin:6px 6px 0 0}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid var(--border);text-align:left}
+    .badge{padding:4px 8px;border-radius:8px;background:#1f2937;font-size:12px}
+    .timer{font-weight:800}
+  </style>
 </head>
 <body>
-<header>
-  <h1>🎛️ Host — Ruleta Quiz</h1>
-  <div class="muted">Evaluación de Vulnerabilidades • crea sala, controla preguntas y ranking</div>
-</header>
+  <header>
+    <div class="title">🎡 Ruleta Quiz — Panel del Docente</div>
+    <div class="muted">Crea sala, comparte el PIN y controla el juego</div>
+  </header>
 
-<main>
-  <div class="card">
-    <div class="row">
-      <div>
-        <label>Nombre de la sala</label>
-        <input id="roomName" placeholder="Ej. 3ro A - Evaluación de Vulnerabilidades" />
-      </div>
-      <div>
-        <label>Duración por pregunta (segundos)</label>
-        <input id="questionTime" type="number" value="25" min="5" max="180" />
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:8px">
-      <div>
-        <label>Banco de preguntas (JSON)</label>
-        <textarea id="questionsJson" placeholder='[{"texto":"¿…?","opciones":["A","B","C","D"],"correcta":2}]'></textarea>
-        <div class="inline muted" style="margin-top:8px">
-          <span class="badge">TIP</span>
-          Puedes pegar aquí tu banco o subir el archivo <code>questions.json</code>.
+  <main>
+    <!-- Configuración y creación de sala -->
+    <section class="card">
+      <div class="row">
+        <div>
+          <label>Nombre de la sala</label>
+          <input id="roomName" placeholder="Ej. Evaluación de Vulnerabilidades – Paralelo A"/>
         </div>
-      </div>
-      <div>
-        <label>Cargar archivo questions.json</label>
-        <input id="questionsFile" type="file" accept=".json" />
-        <div class="inline muted" style="margin-top:8px">
-          <span class="badge">Formato</span>
-          <code>[{"texto":"...","opciones":["A","B","C","D"],"correcta":0}]</code>
-        </div>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:8px">
-      <div><button id="createRoomBtn">Crear sala</button></div>
-      <div class="inline">
-        <div>PIN: <strong id="pin">—</strong></div>
-        <div>Estado: <span id="state" class="badge">sin iniciar</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>👥 Jugadores conectados</h3>
-    <div class="players" id="players"></div>
-  </div>
-
-  <div class="card">
-    <h3>🧭 Control de preguntas</h3>
-    <div class="grid2">
-      <div class="qbox">
-        <div class="inline" style="justify-content: space-between;">
-          <div><span class="badge">Actual</span> <span id="qIndex">—</span> / <span id="qTotal">—</span></div>
-          <div class="inline">
-            <button id="prevBtn">⟵ Anterior</button>
-            <button id="nextBtn">Siguiente ⟶</button>
-          </div>
-        </div>
-        <div id="qText" style="margin-top:10px;font-size:18px"></div>
-        <div class="answers" id="qOptions"></div>
-        <div class="inline muted" style="margin-top:8px">
-          <span class="badge">Correcta</span> <span id="qCorrect">—</span>
+        <div>
+          <label>Duración por pregunta (segundos)</label>
+          <input id="questionTime" type="number" value="25" min="5" max="180"/>
         </div>
       </div>
 
-      <div class="qbox">
-        <div class="inline" style="justify-content: space-between;">
-          <div><span class="badge">Tiempo</span> <span id="timer">—</span>s</div>
-          <div class="inline">
+      <div class="row">
+        <div>
+          <label>Banco de preguntas (JSON)</label>
+          <textarea id="questionsJson" placeholder='[{"texto":"¿Capital de Ecuador?","opciones":["Guayaquil","Quito","Cuenca"],"correcta":1}]'></textarea>
+          <div class="muted" style="margin-top:6px"><span class="badge">TIP</span> Puedes pegar aquí tu banco, o subir <code>questions.json</code> al lado.</div>
+        </div>
+        <div>
+          <label>Subir archivo <code>questions.json</code></label>
+          <input id="questionsFile" type="file" accept=".json"/>
+          <div class="muted" style="margin-top:6px"><span class="badge">Formato</span> <code>[{"texto":"...","opciones":["A","B","C","D"],"correcta":2}]</code></div>
+        </div>
+      </div>
+
+      <div class="row" style="align-items:center">
+        <div><button id="createRoomBtn">Crear sala</button></div>
+        <div class="pill">PIN: <strong id="pin">—</strong></div>
+        <div class="pill">Estado: <strong id="state">sin iniciar</strong></div>
+      </div>
+      <div class="muted" style="margin-top:8px">Enlace para estudiantes: <code><span id="joinUrl">—</span></code></div>
+    </section>
+
+    <!-- Jugadores -->
+    <section class="card">
+      <h3>Jugadores conectados</h3>
+      <div id="players" class="players"></div>
+    </section>
+
+    <!-- Control de preguntas -->
+    <section class="card">
+      <h3>Control</h3>
+      <div class="grid2">
+        <div class="card" style="margin:0">
+          <div class="pill"><span class="badge">Pregunta</span>&nbsp;<span id="qIndex">—</span> / <span id="qTotal">—</span></div>
+          <div id="qText" style="margin-top:10px;font-size:18px">—</div>
+          <div class="answers" id="qOptions" style="margin-top:8px"></div>
+          <div class="muted" style="margin-top:8px"><span class="badge">Correcta</span> <span id="qCorrect">—</span></div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="pill">Tiempo: <span class="timer" id="timer">—</span>s</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
             <button id="startQBtn">▶︎ Iniciar pregunta</button>
             <button id="revealBtn">👁 Mostrar correcta</button>
+            <button id="prevBtn">⟵ Anterior</button>
+            <button id="nextBtn">Siguiente ⟶</button>
             <button id="endBtn">🏁 Finalizar juego</button>
           </div>
+          <div id="answersStats" class="muted" style="margin-top:10px">Aún sin respuestas…</div>
         </div>
-        <div class="muted" id="answersStats" style="margin-top:10px">Aún sin respuestas…</div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <div class="card">
-    <h3>🏆 Ranking (Top 5)</h3>
-    <table>
-      <thead><tr><th>#</th><th>Jugador</th><th>Puntos</th></tr></thead>
-      <tbody id="lbBody"></tbody>
-    </table>
-  </div>
+    <!-- Ranking -->
+    <section class="card">
+      <h3>🏆 Ranking (Top 5)</h3>
+      <table>
+        <thead><tr><th>#</th><th>Jugador</th><th>Puntos</th></tr></thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </section>
+  </main>
 
-  <div class="card center muted">
-    Comparte este enlace con los estudiantes: <code><span id="joinUrl">—</span></code>
-  </div>
-</main>
+  <!-- Firebase + lógica del host -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, update, child, remove } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-<!-- 🔌 Firebase (usa Realtime Database) -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-  import { getDatabase, ref, set, get, onValue, update, push, child, remove } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
-
-  // Config TUYA (con databaseURL de tu consola)
-  const firebaseConfig = {
-    apiKey: "AIzaSyDDWj49V7myELlBoHQ9dgVKxz163FJyjEc",
-    authDomain: "ruleta-quiz.firebaseapp.com",
-    projectId: "ruleta-quiz",
-    storageBucket: "ruleta-quiz.firebasestorage.app",
-    messagingSenderId: "384827905965",
-    appId: "1:384827905965:web:897a8b455f1e0a2c54f324",
-    databaseURL: "https://ruleta-quiz-default-rtdb.firebaseio.com"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  window._firebase = { db, ref, set, get, onValue, update, push, child, remove };
-</script>
-
-<script type="module">
-  const { db, ref, set, get, onValue, update, push, child, remove } = window._firebase;
-
-  const roomName = document.getElementById('roomName');
-  const questionTime = document.getElementById('questionTime');
-  const questionsJson = document.getElementById('questionsJson');
-  const questionsFile = document.getElementById('questionsFile');
-  const createRoomBtn = document.getElementById('createRoomBtn');
-  const playersDiv = document.getElementById('players');
-  const pinEl = document.getElementById('pin');
-  const stateEl = document.getElementById('state');
-  const qIndexEl = document.getElementById('qIndex');
-  const qTotalEl = document.getElementById('qTotal');
-  const qTextEl = document.getElementById('qText');
-  const qOptionsEl = document.getElementById('qOptions');
-  const qCorrectEl = document.getElementById('qCorrect');
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const startQBtn = document.getElementById('startQBtn');
-  const revealBtn = document.getElementById('revealBtn');
-  const endBtn = document.getElementById('endBtn');
-  const timerEl = document.getElementById('timer');
-  const answersStatsEl = document.getElementById('answersStats');
-  const joinUrlEl = document.getElementById('joinUrl');
-
-  let roomId = null;
-  let questions = [];
-  let timerInterval = null;
-
-  questionsFile.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const text = await file.text();
-    try {
-      const data = JSON.parse(text);
-      if (Array.isArray(data)) {
-        questions = data;
-        questionsJson.value = JSON.stringify(data, null, 2);
-        qTotalEl.textContent = data.length;
-      } else alert('El JSON debe ser un arreglo de preguntas');
-    } catch (err) {
-      alert('JSON inválido: ' + err.message);
-    }
-  });
-
-  function loadQuestionsFromTextarea(){
-    if (!questionsJson.value.trim()) return [];
-    try {
-      const data = JSON.parse(questionsJson.value);
-      return Array.isArray(data) ? data : [];
-    } catch { return []; }
-  }
-
-  function generatePin(){
-    return Math.floor(100000 + Math.random()*900000).toString();
-  }
-
-  async function createRoom(){
-    questions = loadQuestionsFromTextarea();
-    if (questions.length === 0) {
-      alert('Carga preguntas en JSON antes de crear la sala.');
-      return;
-    }
-    const pin = generatePin();
-    const r = ref(db, 'rooms/' + pin);
-    const payload = {
-      name: roomName.value || 'Sala sin nombre',
-      createdAt: Date.now(),
-      state: 'lobby',             // lobby | asking | reveal | ended
-      questionIndex: 0,
-      questionTime: Number(questionTime.value) || 25,
-      questions: questions,
-      players: {},                // uid: {name, score}
-      answers: {}                 // qIndex: { uid: answerIndex }
+    // === CONFIG FIREBASE (con tu databaseURL) ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyDDWj49V7myELlBoHQ9dgVKxz163FJyjEc",
+      authDomain: "ruleta-quiz.firebaseapp.com",
+      projectId: "ruleta-quiz",
+      storageBucket: "ruleta-quiz.firebasestorage.app",
+      messagingSenderId: "384827905965",
+      appId: "1:384827905965:web:897a8b455f1e0a2c54f324",
+      databaseURL: "https://ruleta-quiz-default-rtdb.firebaseio.com"
     };
-    await set(r, payload);
-    roomId = pin;
-    pinEl.textContent = pin;
-    stateEl.textContent = 'lobby';
-    qTotalEl.textContent = questions.length;
-    updateJoinUrl();
-    subscribeRoom();
-  }
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  function updateJoinUrl(){
-    const u = new URL(window.location.href);
-    const base = u.origin + u.pathname.replace('host.html','') + 'join.html';
-    joinUrlEl.textContent = base + '?pin=' + roomId;
-  }
+    // === DOM ===
+    const roomName = document.getElementById('roomName');
+    const questionTime = document.getElementById('questionTime');
+    const questionsJson = document.getElementById('questionsJson');
+    const questionsFile = document.getElementById('questionsFile');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const playersDiv = document.getElementById('players');
+    const pinEl = document.getElementById('pin');
+    const stateEl = document.getElementById('state');
+    const qIndexEl = document.getElementById('qIndex');
+    const qTotalEl = document.getElementById('qTotal');
+    const qTextEl = document.getElementById('qText');
+    const qOptionsEl = document.getElementById('qOptions');
+    const qCorrectEl = document.getElementById('qCorrect');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const startQBtn = document.getElementById('startQBtn');
+    const revealBtn = document.getElementById('revealBtn');
+    const endBtn = document.getElementById('endBtn');
+    const timerEl = document.getElementById('timer');
+    const answersStatsEl = document.getElementById('answersStats');
+    const joinUrlEl = document.getElementById('joinUrl');
 
-  function subscribeRoom(){
-    const r = ref(db, 'rooms/' + roomId);
-    onValue(r, (snap) => {
-      const data = snap.val();
-      if (!data) return;
+    let roomId = null;
+    let questions = [];
+    let timerInterval = null;
 
-      stateEl.textContent = data.state;
+    // Cargar JSON desde archivo
+    questionsFile.addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      try{
+        const data = JSON.parse(await file.text());
+        if(Array.isArray(data)){
+          questions = data;
+          questionsJson.value = JSON.stringify(data, null, 2);
+          qTotalEl.textContent = data.length;
+        } else alert('El JSON debe ser un arreglo de preguntas.');
+      }catch(err){ alert('JSON inválido: '+err.message); }
+    });
 
-      playersDiv.innerHTML = '';
-      const players = data.players || {};
-      const arr = Object.entries(players).map(([uid,p]) => ({uid, ...p}));
-      arr.sort((a,b)=> b.score - a.score);
-      arr.forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'pill';
-        div.textContent = `${p.name} • ${p.score||0} pts`;
-        playersDiv.appendChild(div);
-      });
+    function loadQuestionsFromTextarea(){
+      if (!questionsJson.value.trim()) return [];
+      try{
+        const data = JSON.parse(questionsJson.value);
+        if (Array.isArray(data)) return data;
+      }catch{ alert('JSON de preguntas inválido'); }
+      return [];
+    }
 
-      const qi = data.questionIndex || 0;
-      qIndexEl.textContent = qi + 1;
-      const q = (data.questions||[])[qi];
-      if (q) {
-        qTextEl.textContent = q.texto;
-        qOptionsEl.innerHTML = '';
-        (q.opciones||[]).forEach((op, idx) => {
-          const b = document.createElement('button');
-          b.textContent = String.fromCharCode(65+idx) + ') ' + op;
-          b.disabled = true;
-          qOptionsEl.appendChild(b);
+    function generatePin(){
+      return Math.floor(100000 + Math.random()*900000).toString();
+    }
+
+    async function createRoom(){
+      questions = loadQuestionsFromTextarea();
+      if(questions.length === 0){ alert('Carga preguntas en JSON antes de crear la sala.'); return; }
+      const pin = generatePin();
+      const r = ref(db, 'rooms/'+pin);
+      const payload = {
+        name: roomName.value || 'Sala sin nombre',
+        createdAt: Date.now(),
+        state: 'lobby',           // lobby | asking | reveal | ended
+        questionIndex: 0,
+        questionTime: Number(questionTime.value) || 25,
+        questions,
+        players: {},              // uid: {name, score}
+        answers: {}               // qIndex: {uid: answerIndex}
+      };
+      await set(r, payload);
+      roomId = pin;
+      pinEl.textContent = pin;
+      stateEl.textContent = 'lobby';
+      qTotalEl.textContent = questions.length;
+      updateJoinUrl();
+      subscribeRoom();
+    }
+
+    function updateJoinUrl(){
+      const u = new URL(location.href);
+      const base = u.origin + u.pathname.replace('host.html','') + 'join.html';
+      joinUrlEl.textContent = base + '?pin=' + roomId;
+    }
+
+    function subscribeRoom(){
+      onValue(ref(db, 'rooms/'+roomId), (snap)=>{
+        const data = snap.val();
+        if(!data) return;
+
+        // Estado
+        stateEl.textContent = data.state;
+
+        // Jugadores
+        const players = data.players || {};
+        const arr = Object.entries(players).map(([uid,p])=>({uid,...p})).sort((a,b)=>b.score-(a.score||0));
+        playersDiv.innerHTML = '';
+        arr.forEach(p=>{
+          const div = document.createElement('div');
+          div.className='pill';
+          div.textContent = `${p.name} • ${(p.score||0)} pts`;
+          playersDiv.appendChild(div);
         });
-        qCorrectEl.textContent = q.correcta != null ? String.fromCharCode(65 + q.correcta) : '—';
 
-        const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
-        const counts = new Array((q.opciones||[]).length).fill(0);
-        Object.values(answers).forEach(a => { if (typeof a === 'number') counts[a]++; });
-        answersStatsEl.textContent = 'Respuestas: ' + Object.keys(answers).length + ' — ' +
-          counts.map((c,i)=> String.fromCharCode(65+i)+': '+c).join('  |  ');
-      }
+        // Pregunta actual
+        const qi = data.questionIndex || 0;
+        qIndexEl.textContent = qi + 1;
+        const q = (data.questions||[])[qi];
+        if (q){
+          qTextEl.textContent = q.texto || '—';
+          qOptionsEl.innerHTML = '';
+          (q.opciones||[]).forEach((op,idx)=>{
+            const b = document.createElement('button');
+            b.textContent = String.fromCharCode(65+idx)+') '+op;
+            b.disabled = true;
+            qOptionsEl.appendChild(b);
+          });
+          qCorrectEl.textContent = (q.correcta!=null) ? String.fromCharCode(65+q.correcta) : '—';
 
-      renderLeaderboard(arr);
-    });
-  }
+          const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
+          const counts = new Array(q.opciones.length).fill(0);
+          Object.values(answers).forEach(a=>{ if (typeof a==='number') counts[a]++; });
+          answersStatsEl.textContent = `Respuestas: ${Object.keys(answers).length} — ` + counts.map((c,i)=>`${String.fromCharCode(65+i)}:${c}`).join(' | ');
+        }
 
-  function renderLeaderboard(arr){
-    const lbBody = document.getElementById('lbBody');
-    lbBody.innerHTML = '';
-    arr.slice(0,5).forEach((p,i)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${i+1}</td><td>${p.name}</td><td>${p.score||0}</td>`;
-      lbBody.appendChild(tr);
-    });
-  }
+        // Ranking
+        renderLeaderboard(arr);
+      });
+    }
 
-  async function setState(state){
-    await update(ref(db, 'rooms/' + roomId), { state });
-  }
+    function renderLeaderboard(arr){
+      const lbBody = document.getElementById('lbBody');
+      lbBody.innerHTML = '';
+      arr.slice(0,5).forEach((p,i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i+1}</td><td>${p.name}</td><td>${p.score||0}</td>`;
+        lbBody.appendChild(tr);
+      });
+    }
 
-  async function setQuestionIndex(qi){
-    await update(ref(db, 'rooms/' + roomId), { questionIndex: qi });
-  }
+    async function setState(state){
+      await update(ref(db,'rooms/'+roomId), { state });
+    }
+    async function setQuestionIndex(qi){
+      await update(ref(db,'rooms/'+roomId), { questionIndex: qi });
+    }
 
-  function startTimer(seconds){
-    clearInterval(timerInterval);
-    let t = seconds;
-    timerEl.textContent = t;
-    timerInterval = setInterval(()=>{
-      t--;
+    function startTimer(seconds){
+      clearInterval(timerInterval);
+      let t = seconds;
       timerEl.textContent = t;
-      if (t <= 0) {
+      timerInterval = setInterval(()=>{
+        t--; timerEl.textContent = t;
+        if (t<=0){ clearInterval(timerInterval); revealCorrect(); }
+      },1000);
+    }
+
+    async function startQuestion(){
+      const snap = await get(ref(db,'rooms/'+roomId));
+      const data = snap.val(); if(!data) return;
+      const qi = data.questionIndex || 0;
+      await update(ref(db,'rooms/'+roomId), { state: 'asking' });
+      // Limpia respuestas de esta pregunta
+      await remove(child(ref(db), 'rooms/'+roomId+'/answers/'+qi));
+      startTimer(data.questionTime || 25);
+    }
+
+    async function revealCorrect(){
+      const snap = await get(ref(db,'rooms/'+roomId));
+      const data = snap.val(); if(!data) return;
+      const qi = data.questionIndex || 0;
+      const q = data.questions[qi]; if(!q) return;
+      const correct = q.correcta;
+      const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
+      const updates = {};
+      Object.entries(data.players||{}).forEach(([uid,p])=>{
+        const ans = answers[uid];
+        if (typeof ans === 'number' && ans === correct){
+          const add = 100; // ajustable
+          updates['rooms/'+roomId+'/players/'+uid+'/score'] = (p.score||0) + add;
+        }
+      });
+      if (Object.keys(updates).length) await update(ref(db), updates);
+      await setState('reveal');
+    }
+
+    async function nextQuestion(){
+      const snap = await get(ref(db,'rooms/'+roomId));
+      const data = snap.val(); if(!data) return;
+      let qi = (data.questionIndex||0) + 1;
+      if (qi >= data.questions.length){
+        await setState('ended');
         clearInterval(timerInterval);
-        revealCorrect();
+        return;
       }
-    }, 1000);
-  }
+      await setQuestionIndex(qi);
+      answersStatsEl.textContent = 'Aún sin respuestas…';
+      timerEl.textContent = '—';
+      await setState('lobby');
+    }
 
-  async function startQuestion(){
-    const snap = await get(ref(db, 'rooms/' + roomId));
-    const data = snap.val(); if (!data) return;
-    await update(ref(db, 'rooms/' + roomId), { state: 'asking' });
-    const qi = data.questionIndex || 0;
-    await remove(child(ref(db, 'rooms/' + roomId + '/answers'), String(qi)));
-    startTimer(data.questionTime || 25);
-  }
+    async function prevQuestion(){
+      const snap = await get(ref(db,'rooms/'+roomId));
+      const data = snap.val(); if(!data) return;
+      let qi = Math.max(0, (data.questionIndex||0) - 1);
+      await setQuestionIndex(qi);
+    }
 
-  async function revealCorrect(){
-    const snap = await get(ref(db, 'rooms/' + roomId));
-    const data = snap.val(); if (!data) return;
-    const qi = data.questionIndex || 0;
-    const q  = data.questions[qi];
-    const correct = q.correcta;
-    const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
-    const updates = {};
-    Object.entries(data.players || {}).forEach(([uid, p]) => {
-      const ans = answers[uid];
-      if (typeof ans === 'number' && ans === correct) {
-        const add = 100; // puntos por acierto
-        updates['rooms/' + roomId + '/players/' + uid + '/score'] = (p.score || 0) + add;
-      }
-    });
-    if (Object.keys(updates).length) await update(ref(db), updates);
-    await setState('reveal');
-  }
-
-  async function nextQuestion(){
-    const snap = await get(ref(db, 'rooms/' + roomId));
-    const data = snap.val(); if (!data) return;
-    let qi = (data.questionIndex || 0) + 1;
-    if (qi >= (data.questions||[]).length) {
+    async function endGame(){
       await setState('ended');
       clearInterval(timerInterval);
-      return;
     }
-    await setQuestionIndex(qi);
-    answersStatsEl.textContent = 'Aún sin respuestas…';
-    timerEl.textContent = '—';
-    await setState('lobby');
-  }
 
-  function prevQuestion(){
-    get(ref(db, 'rooms/' + roomId)).then(snap=>{
-      const data = snap.val(); if (!data) return;
-      let qi = Math.max(0, (data.questionIndex || 0) - 1);
-      setQuestionIndex(qi);
+    // Eventos
+    createRoomBtn.addEventListener('click', createRoom);
+    prevBtn.addEventListener('click', prevQuestion);
+    nextBtn.addEventListener('click', nextQuestion);
+    startQBtn.addEventListener('click', startQuestion);
+    revealBtn.addEventListener('click', revealCorrect);
+    endBtn.addEventListener('click', endGame);
+
+    // Update total al escribir JSON
+    questionsJson.addEventListener('input', ()=>{
+      const qs = loadQuestionsFromTextarea();
+      qTotalEl.textContent = qs.length || '—';
     });
-  }
-
-  async function endGame(){
-    await setState('ended');
-    clearInterval(timerInterval);
-  }
-
-  createRoomBtn.addEventListener('click', createRoom);
-  prevBtn.addEventListener('click', prevQuestion);
-  nextBtn.addEventListener('click', nextQuestion);
-  startQBtn.addEventListener('click', startQuestion);
-  revealBtn.addEventListener('click', revealCorrect);
-  endBtn.addEventListener('click', endGame);
-
-  questionsJson.addEventListener('input', ()=>{
-    const qs = loadQuestionsFromTextarea();
-    qTotalEl.textContent = qs.length || '—';
-  });
-</script>
+  </script>
 </body>
 </html>

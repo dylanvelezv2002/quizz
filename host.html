@@ -168,9 +168,17 @@
     const answersStatsEl = document.getElementById('answersStats');
     const joinUrlEl = document.getElementById('joinUrl');
 
+    // === Estado local ===
     let roomId = null;
     let questions = [];
     let timerInterval = null;
+
+    // === Puntuación/auto-avance tipo Kahoot ===
+    const BASE_POINTS = 100;         // puntos por acierto
+    const AUTO_ADVANCE_DELAY = 3000; // ms que se muestran resultados antes de avanzar
+    let isAutoAdvancing = false;
+
+    const sleep = (ms) => new Promise(res => setTimeout(res, ms));
 
     // Cargar JSON desde archivo
     questionsFile.addEventListener('change', async (e)=>{
@@ -213,6 +221,7 @@
         questions,
         players: {},              // uid: {name, score}
         answers: {}               // qIndex: {uid: answerIndex}
+        // awards se creará por pregunta en revealCorrect()
       };
       await set(r, payload);
       roomId = pin;
@@ -239,7 +248,7 @@
 
         // Jugadores
         const players = data.players || {};
-        const arr = Object.entries(players).map(([uid,p])=>({uid,...p})).sort((a,b)=>b.score-(a.score||0));
+        const arr = Object.entries(players).map(([uid,p])=>({uid,...p})).sort((a,b)=> (b.score||0)-(a.score||0));
         playersDiv.innerHTML = '';
         arr.forEach(p=>{
           const div = document.createElement('div');
@@ -295,46 +304,76 @@
       clearInterval(timerInterval);
       let t = seconds;
       timerEl.textContent = t;
-      timerInterval = setInterval(()=>{
+      timerInterval = setInterval(async ()=>{
         t--; timerEl.textContent = t;
-        if (t<=0){ clearInterval(timerInterval); revealCorrect(); }
+        if (t<=0){
+          clearInterval(timerInterval);
+          await handleTimeUpAdvance();
+        }
       },1000);
+    }
+
+    // Maneja “se acabó el tiempo”: revela -> espera -> avanza
+    async function handleTimeUpAdvance(){
+      if (isAutoAdvancing) return;
+      isAutoAdvancing = true;
+      try{
+        await revealCorrect();              // puntúa y publica awards
+        await sleep(AUTO_ADVANCE_DELAY);    // deja ver animaciones en clientes
+        await nextQuestion();               // avanza o termina
+      } finally {
+        isAutoAdvancing = false;
+      }
     }
 
     async function startQuestion(){
       const snap = await get(ref(db,'rooms/'+roomId));
       const data = snap.val(); if(!data) return;
       const qi = data.questionIndex || 0;
+
+      // Estado asking y limpieza de respuestas + awards de esta pregunta
       await update(ref(db,'rooms/'+roomId), { state: 'asking' });
-      // Limpia respuestas de esta pregunta
-      await remove(child(ref(db), 'rooms/'+roomId+'/answers/'+qi));
+      await remove(child(ref(db), 'rooms/'+roomId+'/answers/'+qi)).catch(()=>{});
+      await remove(child(ref(db), 'rooms/'+roomId+'/awards/'+qi)).catch(()=>{});
+
       startTimer(data.questionTime || 25);
     }
 
+    // Revela correcta, puntúa y escribe awards[qi][uid] = puntos (100 o 0)
     async function revealCorrect(){
       const snap = await get(ref(db,'rooms/'+roomId));
       const data = snap.val(); if(!data) return;
+
       const qi = data.questionIndex || 0;
-      const q = data.questions[qi]; if(!q) return;
+      const q  = data.questions[qi]; if(!q) return;
+
       const correct = q.correcta;
       const answers = (data.answers && data.answers[qi]) ? data.answers[qi] : {};
+      const players = data.players || {};
+
       const updates = {};
-      Object.entries(data.players||{}).forEach(([uid,p])=>{
+      Object.entries(players).forEach(([uid,p])=>{
         const ans = answers[uid];
-        if (typeof ans === 'number' && ans === correct){
-          const add = 100; // ajustable
-          updates['rooms/'+roomId+'/players/'+uid+'/score'] = (p.score||0) + add;
+        const won = (typeof ans === 'number' && ans === correct);
+        const add = won ? BASE_POINTS : 0;
+
+        if (add > 0){
+          updates[`rooms/${roomId}/players/${uid}/score`] = (p.score || 0) + add;
         }
+        // Publica premio para animaciones en clientes
+        updates[`rooms/${roomId}/awards/${qi}/${uid}`] = add; // 100 o 0
       });
+
       if (Object.keys(updates).length) await update(ref(db), updates);
-      await setState('reveal');
+      await update(ref(db,'rooms/'+roomId), { state: 'reveal' });
     }
 
     async function nextQuestion(){
       const snap = await get(ref(db,'rooms/'+roomId));
       const data = snap.val(); if(!data) return;
+
       let qi = (data.questionIndex||0) + 1;
-      if (qi >= data.questions.length){
+      if (qi >= (data.questions?.length || 0)){
         await setState('ended');
         clearInterval(timerInterval);
         return;
